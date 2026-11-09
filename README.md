@@ -72,7 +72,3 @@ Relatos de compatibilidade vão em [Discussions](https://github.com/renelima/Nat
 ## Aviso legal
 
 Use **apenas dumps próprios e legalmente adquiridos** dos seus jogos. Este repositório e o app não contêm nem distribuem código de jogos, dados, chaves, firmwares ou bibliotecas de shaders. O NativeAYN não tem afiliação com Nintendo ou com qualquer publicadora; problemas devem ser reportados aqui, nunca aos detentores dos jogos.
-
-## Créditos e licença
-
-O NativeAYN tem base no projeto **Anka Native**, de EddizEge, e nas tecnologias creditadas em [NOTICE.md](NOTICE.md). A identidade visual (logo, marca "N", paleta Deep Space) e a feature de mapeamento de controles são originais deste projeto. Licença: [LICENSE](LICENSE) (GPL-3.0-or-later, conforme NOTICE).

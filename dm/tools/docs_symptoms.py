@@ -10,8 +10,12 @@ REF = REPO / 'docs' / 'reference'
 OUT = REPO / 'docs' / 'agents' / 'symptoms.md'
 
 def slug(h):
-    # GitHub's heading anchor: lower case, punctuation dropped except - and _, spaces to -
+    # GitHub's heading anchor: lower case, punctuation dropped except - and _, spaces to -;
+    # Latin letters with diacritics fold to their base (GitHub strips the accents: "Verificação" -> "verificacao").
+    # Only NFD (not NFKD): µ and friends must not decompose.
     h = re.sub(r'<[^>]+>', '', h).strip().lower()
+    h = unicodedata.normalize('NFD', h)
+    h = ''.join(c for c in h if not unicodedata.combining(c))
     h = ''.join(c for c in h if c in ' -_' or unicodedata.category(c)[0] in 'LN')
     return h.replace(' ', '-')
 

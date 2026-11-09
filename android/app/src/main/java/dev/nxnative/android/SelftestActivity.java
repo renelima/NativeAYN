@@ -50,7 +50,7 @@ public final class SelftestActivity extends Activity implements SurfaceHolder.Ca
         setContentView(root);
         File log = new File(LogProvider.dir(this), "selftest-" + new SimpleDateFormat("yyyyMMdd-HHmmss", Locale.ROOT).format(new Date()) + ".log");
         if (Native.openLog(log.getPath()) != 0) { status.setText("FAIL: cannot open the log " + log); return; }
-        Native.note("graphics selftest: NativeAYN " + BuildConfig.VERSION_NAME + " (" + BuildConfig.NX_COMMIT + "); device " + Build.MANUFACTURER + " " + Build.MODEL
+        Native.note("graphics selftest: NativeAYN v" + BuildConfig.VERSION_NAME + "; device " + Build.MANUFACTURER + " " + Build.MODEL
                 + ", Android " + Build.VERSION.RELEASE + " (SDK " + Build.VERSION.SDK_INT + "), " + Build.SUPPORTED_ABIS[0]);
         status.setText(Native.hasSelftest() ? "Graphics self-test: waiting for the surface" : "FAIL: this host has no nxhost_vk_selftest");
     }
