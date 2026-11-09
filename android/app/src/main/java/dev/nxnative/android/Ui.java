@@ -16,9 +16,12 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowInsets;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.ProgressBar;
 import android.widget.ScrollView;
 import android.widget.Switch;
@@ -433,6 +436,65 @@ final class Ui {
         bar.setProgressBackgroundTintList(ColorStateList.valueOf(col(c, R.color.bn_card_stroke)));
         bar.setScaleY(1.6f);
         return bar;
+    }
+
+    // ---- In-game panel parts (SidePanel): the same design system over the running game ----
+
+    /** A setting's tick row: a CheckBox in the teal accent, body-size text (the in-game panel, a settings sheet) */
+    static CheckBox toggle(Context c, CharSequence label, boolean on, android.widget.CompoundButton.OnCheckedChangeListener l) {
+        CheckBox b = new CheckBox(c);
+        b.setText(label);
+        b.setTextSize(15);
+        b.setTypeface(face(500));
+        b.setTextColor(col(c, R.color.bn_text));
+        b.setPadding(dp(c, 2), dp(c, 7), dp(c, 2), dp(c, 7));
+        b.setChecked(on);
+        b.setOnCheckedChangeListener(l);
+        return b;
+    }
+
+    /** A pill selector: one option per segment, the chosen one solid teal (the game-menu look for fps caps, multipliers, sharpness) */
+    static RadioGroup pillGroup(Context c, String[] labels, int checked, RadioGroup.OnCheckedChangeListener pick) {
+        RadioGroup g = new RadioGroup(c);
+        g.setOrientation(LinearLayout.HORIZONTAL);
+        int gap = dp(c, 6);
+        for (int i = 0; i < labels.length; i++) {
+            RadioButton b = new RadioButton(c);
+            b.setText(labels[i]);
+            b.setId(1000 + i);
+            b.setButtonDrawable((android.graphics.drawable.Drawable) null);   // the pill is the state: no radio dot
+            b.setTextSize(13);
+            b.setTypeface(face(600));
+            b.setSingleLine(true);
+            b.setMinHeight(dp(c, 38));
+            b.setPadding(dp(c, 16), 0, dp(c, 16), 0);
+            b.setGravity(Gravity.CENTER);
+            b.setStateListAnimator(null);
+            b.setTextColor(new ColorStateList(new int[][]{{android.R.attr.state_checked}, {}},
+                    new int[]{col(c, R.color.bn_on_banana), col(c, R.color.bn_text_2)}));
+            b.setBackground(pillStates(c));   // the pill states (a teal ripple would need a single-shape mask; the states say it themselves)
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            lp.leftMargin = i > 0 ? gap : 0;
+            g.addView(b, lp);
+        }
+        if (checked >= 0 && checked < labels.length) ((RadioButton) g.getChildAt(checked)).setChecked(true);   // the initial state first: a listener set before it would run against a half-built screen
+        g.setOnCheckedChangeListener(pick);
+        return g;
+    }
+
+    /** The pill states: selected solid teal, unselected a tinted pill with a hairline (a fresh instance per group) */
+    private static android.graphics.drawable.StateListDrawable pillStates(Context c) {
+        android.graphics.drawable.StateListDrawable s = new android.graphics.drawable.StateListDrawable();
+        s.addState(new int[]{android.R.attr.state_checked}, round(col(c, R.color.bn_banana), dp(c, 19), 0, 0));
+        s.addState(new int[]{}, round(col(c, R.color.bn_tint), dp(c, 19), col(c, R.color.bn_card_stroke), dp(c, 1)));
+        return s;
+    }
+
+    /** A slider in the palette: teal progress, faint track */
+    static void seek(Context c, android.widget.SeekBar b) {
+        b.setProgressTintList(ColorStateList.valueOf(col(c, R.color.bn_accent)));
+        b.setProgressBackgroundTintList(ColorStateList.valueOf(0x33FFFFFF));
+        b.setThumbTintList(ColorStateList.valueOf(col(c, R.color.bn_banana)));
     }
 
     // ---- List rows ----

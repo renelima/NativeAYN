@@ -2,15 +2,13 @@ package dev.nxnative.android;
 
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.graphics.Color;
-import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.View;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
-import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -38,18 +36,21 @@ final class SidePanel extends FrameLayout {
         this.fill = fill;
         float dp = getResources().getDisplayMetrics().density;
         View scrim = new View(a);
-        scrim.setBackgroundColor(0x66000000);
+        scrim.setBackgroundColor(0x8A04070D);   // a deeper navy dim: the game reads as "paused behind a menu"
         scrim.setOnClickListener(v -> close());
         addView(scrim, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
         box = new LinearLayout(a);
         box.setOrientation(LinearLayout.VERTICAL);
-        int p = Math.round(16 * dp);
-        box.setPadding(p, p, p, p);
+        int p = Math.round(20 * dp);
+        box.setPadding(p, Math.round(14 * dp), p, Math.round(24 * dp));
         ScrollView sv = new ScrollView(a);
-        sv.setBackgroundColor(0xF0202124);
+        sv.setBackgroundColor(0xF40C1322);   // the deep navy sheet, nearly opaque, like a console quick menu
         sv.addView(box);
         int w = Math.round(Math.min(420 * dp, a.getResources().getDisplayMetrics().widthPixels * 0.55f));
         addView(sv, new LayoutParams(w, LayoutParams.MATCH_PARENT, Gravity.END));
+        View edge = new View(a);   // the teal edge: this panel belongs to NativeAYN, the same accent rule as the Home header
+        edge.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, new int[]{0xFF2DD4BF, 0x002DD4BF}));
+        addView(edge, new LayoutParams(Math.round(2 * dp), LayoutParams.MATCH_PARENT, Gravity.END));
         sheet = sv;
         setVisibility(GONE);
     }
@@ -90,20 +91,15 @@ final class SidePanel extends FrameLayout {
     }
 
     private TextView head(String t) {
-        TextView h = new TextView(act);
-        h.setText(t);
-        h.setTypeface(Typeface.DEFAULT_BOLD);
-        h.setTextSize(15);
-        h.setPadding(0, Math.round(18 * getResources().getDisplayMetrics().density), 0, 0);
+        TextView h = Ui.section(act, t);   // the same bracket label the launcher's sections use: 12 sp caps, teal bracket
+        h.setPadding(h.getPaddingLeft(), Math.round(20 * getResources().getDisplayMetrics().density), 0, 0);
         box.addView(h);
         return h;
     }
 
     private TextView note(String t) {
-        TextView n = new TextView(act);
-        n.setText(t);
-        n.setTextSize(12);
-        n.setTextColor(Color.LTGRAY);
+        TextView n = Ui.small(act, t);
+        n.setPadding(Ui.dp(act, 2), 0, 0, 0);
         box.addView(n);
         return n;
     }
@@ -112,26 +108,38 @@ final class SidePanel extends FrameLayout {
     private String game() { return String.valueOf(act.getIntent().getStringExtra("title_id")); }
 
     private void build() {
-        TextView title = new TextView(act);
-        title.setText("NativeAYN");
-        title.setTypeface(Typeface.DEFAULT_BOLD);
-        title.setTextSize(20);
-        box.addView(title);
+        // The panel's header: the NativeAYN mark over the game, its name, the running game's title, the same teal rule as the launcher's headers
+        LinearLayout h = Ui.row(act);
+        h.setMinimumHeight(Ui.dp(act, 52));
+        h.addView(Ui.badge(act, 40));
+        LinearLayout col = new LinearLayout(act);
+        col.setOrientation(LinearLayout.VERTICAL);
+        col.setPadding(Ui.dp(act, 12), 0, 0, 0);
+        TextView t = Ui.text(act, "NativeAYN", 20, R.color.bn_text, 800);
+        t.setLetterSpacing(-0.01f);
+        col.addView(t);
+        String name = act.getIntent().getStringExtra("name");
+        col.addView(Ui.text(act, name != null && !name.isEmpty() ? name : "In-game menu", 12, R.color.bn_accent, 600));
+        h.addView(col, Ui.weight());
+        box.addView(h);
+        View rule = new View(act);
+        rule.setBackground(new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT, new int[]{0xFF2DD4BF, 0x002DD4BF}));
+        LinearLayout.LayoutParams rp = Ui.fill();
+        rp.height = Ui.dp(act, 2);
+        rp.topMargin = Ui.dp(act, 4);
+        box.addView(rule, rp);
         note("The game runs on behind this panel; every change applies now and is kept.");
 
         head("Frame rate cap");   // the game's own frame rate; frame generation (below, its own heading) adds frames on top
-        caps = new RadioGroup(act);
-        int live = Integer.parseInt(Native.fpsCapStatus().split(" ")[0]), cur = live >= 0 ? live : Prefs.fpsCap(act, game());   // the cap in effect (env.txt or DM_CTL may have set another)
-        for (int i = 0; i < Prefs.FPS_CAPS.length; i++) {
-            int v = Prefs.FPS_CAPS[i];
-            RadioButton b = new RadioButton(act);
-            b.setId(2000 + i);
-            b.setText(v == 0 ? "The game's own" : v + " fps");
-            if (v == cur || v == 0 && cur < 0) b.setChecked(true);   // a cap the launcher does not offer (40, 45 from env.txt or DM_CTL): none checked, the line below says it
-            caps.addView(b);
-        }
-        caps.setOnCheckedChangeListener((g, id) -> {
-            int v = Prefs.FPS_CAPS[id - 2000];
+        int live = Integer.parseInt(Native.fpsCapStatus().split(" ")[0]);
+        int cur = live >= 0 ? live : Prefs.fpsCap(act, game());   // the cap in effect (env.txt or DM_CTL may have set another)
+        String[] capLabels = new String[Prefs.FPS_CAPS.length];
+        for (int i = 0; i < Prefs.FPS_CAPS.length; i++) capLabels[i] = Prefs.FPS_CAPS[i] == 0 ? "Auto" : Prefs.FPS_CAPS[i] + "";
+        int curIdx = -1;
+        for (int i = 0; i < Prefs.FPS_CAPS.length; i++) if (Prefs.FPS_CAPS[i] == cur) curIdx = i;   // a cap off the list (40, 45): none selected, the line below says it
+        if (cur < 0) curIdx = 0;   // no cap set: Auto (the game's own)
+        caps = Ui.pillGroup(act, capLabels, curIdx, (g, id) -> {
+            int v = Prefs.FPS_CAPS[id - 1000];
             Prefs.fpsCap(act, game(), v);   // the running game's own cap from now on (the main screen's stays the default of the others)
             Native.fpsCapSet(v);
             refresh();
@@ -156,35 +164,21 @@ final class SidePanel extends FrameLayout {
         if (sk >= 0 && ((sk & 2) != 0 || GameActivity.testApp())) {
             head("Intro skip (debug)");
             note("Presses A every few frames and ends movies early until gameplay, then stops by itself. In the game: hold − and + together for 1 s.");
-            Button skip = new Button(act);
-            skip.setText((sk & 1) != 0 ? "Stop the intro skip" : "Skip the intro now");
-            skip.setOnClickListener(v -> { Native.skipSet((Native.skipStatus() & 1) != 0 ? 0 : 1); close(); });
-            box.addView(skip, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+            box.addView(Ui.button(act, (sk & 1) != 0 ? "Stop the intro skip" : "Skip the intro now", Ui.Kind.TONAL,
+                    v -> { Native.skipSet((Native.skipStatus() & 1) != 0 ? 0 : 1); close(); }), Ui.fill());
         }
 
-        Button pause = new Button(act);   // the game suspended (clock, graphics, threads, audio) until a tap on the screen, or A / Start: GameActivity.pause
-        pause.setText("Pause the game");
-        pause.setOnClickListener(v -> { close(); if (act instanceof GameActivity) ((GameActivity) act).pause(); });
-        LinearLayout.LayoutParams pl = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        Button pause = Ui.button(act, "Pause the game", Ui.Kind.TONAL,   // the game suspended (clock, graphics, threads, audio) until a tap on the screen, or A / Start: GameActivity.pause
+                v -> { close(); if (act instanceof GameActivity) ((GameActivity) act).pause(); });
+        LinearLayout.LayoutParams pl = Ui.fill();
         pl.topMargin = Math.round(24 * getResources().getDisplayMetrics().density);
         box.addView(pause, pl);
-        android.widget.CheckBox ret = new android.widget.CheckBox(act);
-        ret.setText("Pause when the game comes back from the background");
-        ret.setChecked(Prefs.pauseOnReturn(act, game()));
-        ret.setOnCheckedChangeListener((b, on) -> Prefs.pauseOnReturn(act, game(), on));
-        box.addView(ret);
-        Button stop = new Button(act);
-        stop.setText("Stop the game");
-        stop.setOnClickListener(v -> new AlertDialog.Builder(act).setTitle("Stop the game?").setMessage("The game ends; unsaved progress is lost. The log stays for Share log.")
+        box.addView(Ui.toggle(act, "Pause when the game comes back from the background", Prefs.pauseOnReturn(act, game()),
+                (b, on) -> Prefs.pauseOnReturn(act, game(), on)));
+        box.addView(Ui.button(act, "Stop the game", Ui.Kind.DANGER, v -> new AlertDialog.Builder(act).setTitle("Stop the game?").setMessage("The game ends; unsaved progress is lost. The log stays for Share log.")
                 .setPositiveButton("Stop", (d, w) -> { Native.note("stopped by the user"); if (act instanceof GameActivity) ((GameActivity) act).backToFrontend(); android.os.Process.killProcess(android.os.Process.myPid()); })
-                .setNegativeButton("Keep running", null).show());
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        lp.topMargin = Math.round(24 * getResources().getDisplayMetrics().density);
-        box.addView(stop, lp);
-        Button done = new Button(act);
-        done.setText("Back to the game");
-        done.setOnClickListener(v -> close());
-        box.addView(done, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+                .setNegativeButton("Keep running", null).show()), Ui.fill());
+        box.addView(Ui.button(act, "Back to the game", Ui.Kind.PRIMARY, v -> close()), Ui.fill());
     }
 
     /** Twice a second while open: what the game runs at, which caps it can hold, and the frame generation's state */

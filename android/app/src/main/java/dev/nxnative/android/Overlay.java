@@ -56,24 +56,19 @@ final class Overlay {
 
     /** The master switch and, below it, one switch per item (main screen dialog, in-game settings) */
     static void rows(Context c, LinearLayout box, String masterNote) {
-        CheckBox master = new CheckBox(c);
-        master.setText("Show the overlay over the game" + (masterNote != null ? masterNote : ""));
-        master.setChecked(Prefs.overlay(c));
+        final List<CheckBox> items = new ArrayList<>();
+        CheckBox master = Ui.toggle(c, "Show the overlay over the game" + (masterNote != null ? masterNote : ""), Prefs.overlay(c),
+                (v, on) -> { Prefs.overlay(c, on); for (CheckBox b : items) b.setEnabled(on); });
         box.addView(master);
-        List<CheckBox> items = new ArrayList<>();
-        int indent = Math.round(24 * c.getResources().getDisplayMetrics().density);
+        int indent = Ui.dp(c, 20);
         for (String[] it : ITEMS) {
-            CheckBox b = new CheckBox(c);
-            b.setText(it[1]);
-            b.setChecked(Prefs.overlayItem(c, it[0]));
+            CheckBox b = Ui.toggle(c, it[1], Prefs.overlayItem(c, it[0]), (v, on) -> Prefs.overlayItem(c, it[0], on));
             b.setEnabled(master.isChecked());
-            b.setOnCheckedChangeListener((v, on) -> Prefs.overlayItem(c, it[0], on));
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
             lp.leftMargin = indent;
             box.addView(b, lp);
             items.add(b);
         }
-        master.setOnCheckedChangeListener((v, on) -> { Prefs.overlay(c, on); for (CheckBox b : items) b.setEnabled(on); });
     }
 
     // ---- Readings ----

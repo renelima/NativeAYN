@@ -1,10 +1,7 @@
 package dev.nxnative.android;
 
 import android.content.Context;
-import android.widget.CheckBox;
 import android.widget.LinearLayout;
-import android.widget.RadioButton;
-import android.widget.RadioGroup;
 import android.widget.TextView;
 
 import java.io.File;
@@ -42,27 +39,16 @@ final class Fsr {
 
     /** The in-game panel's rows: on / off and the sharpness, each applied at once */
     static void rows(Context c, LinearLayout box) {
-        TextView head = new TextView(c);
-        head.setText("Upscaling");
-        head.setPadding(0, 24, 0, 0);
+        TextView head = Ui.section(c, "Upscaling");
+        head.setPadding(head.getPaddingLeft(), Ui.dp(c, 20), 0, 0);
         box.addView(head);
-        CheckBox on = new CheckBox(c);
-        on.setText("FSR 1 (sharper when the picture is scaled up to the screen)");
-        on.setChecked(on(c));
-        on.setOnCheckedChangeListener((b, v) -> { Prefs.of(c).edit().putBoolean("fsr", v).commit(); push(c); });
-        box.addView(on);
-        TextView l = new TextView(c); l.setText("Sharpness"); box.addView(l);
-        RadioGroup g = new RadioGroup(c);
-        g.setOrientation(LinearLayout.HORIZONTAL);
+        box.addView(Ui.toggle(c, "FSR 1 (sharper when the picture is scaled up to the screen)", on(c),
+                (b, v) -> { Prefs.of(c).edit().putBoolean("fsr", v).commit(); push(c); }));
+        box.addView(Ui.body(c, "Sharpness"));
         String[] labels = {"Max", "Default", "Soft", "Softer"};
-        for (int i = 0; i < SHARPS.length; i++) {
-            RadioButton b = new RadioButton(c);
-            b.setText(labels[i]);
-            b.setId(3000 + i);
-            g.addView(b);
-            if (SHARPS[i] == sharp(c)) b.setChecked(true);
-        }
-        g.setOnCheckedChangeListener((gr, id) -> { Prefs.of(c).edit().putFloat("fsr_sharp", SHARPS[id - 3000]).commit(); push(c); });
-        box.addView(g);
+        int cur = 1;
+        for (int i = 0; i < SHARPS.length; i++) if (SHARPS[i] == sharp(c)) cur = i;
+        box.addView(Ui.pillGroup(c, labels, cur,
+                (gr, id) -> { Prefs.of(c).edit().putFloat("fsr_sharp", SHARPS[id - 1000]).commit(); push(c); }));
     }
 }

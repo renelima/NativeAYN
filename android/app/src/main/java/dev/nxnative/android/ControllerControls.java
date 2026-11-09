@@ -192,38 +192,27 @@ final class ControllerControls {
         devKey = devId >= 0 ? deviceKey(InputDevice.getDevice(devId)) : null;
         String name = devKey == null ? null : prefs(act).getString("name@" + devKey, null);
         if (devKey == null) {
-            TextView t = new TextView(a);
-            t.setText("No controller is connected. Connect one and press its buttons here to map them; the map is kept for it.");
-            t.setTextSize(12);
-            box.addView(t);
+            box.addView(Ui.small(a, "No controller is connected. Connect one and press its buttons here to map them; the map is kept for it."));
         } else {
-            status = new TextView(a);
-            status.setTextSize(13);
+            status = Ui.small(a, "");
             box.addView(status);
-            float dp = a.getResources().getDisplayMetrics().density;
             for (int i = 0; i < ROWS; i++) {
                 LinearLayout line = new LinearLayout(a);
                 line.setOrientation(LinearLayout.HORIZONTAL);
-                row[i] = new Button(a);
-                row[i].setAllCaps(false);
+                row[i] = Ui.button(a, "", Ui.Kind.SOFT, null);
+                row[i].setTextSize(13);
                 final int r = i;   // the loop variable is not effectively final: the rows' lambdas use this copy
                 row[i].setOnClickListener(v -> startCapture(r));
-                Button reset = new Button(a);
-                reset.setText("Reset");
-                reset.setAllCaps(false);
-                reset.setOnClickListener(v -> { unbindRow(act, devKey, devId, r); reloadRows(); });
+                Button reset = Ui.button(a, "Reset", Ui.Kind.QUIET, v -> { unbindRow(act, devKey, devId, r); reloadRows(); });
                 LinearLayout.LayoutParams grow = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
                 line.addView(row[i], grow);
                 line.addView(reset, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT));
                 box.addView(line);
             }
-            Button clear = new Button(a);
-            clear.setText("Clear all (back to the default table)");
-            clear.setAllCaps(false);
-            clear.setOnClickListener(v -> { clearAll(act, devKey, devId); reloadRows(); });
-            box.addView(clear);
-            deadLabel = new TextView(a);
+            box.addView(Ui.button(a, "Clear all (back to the default table)", Ui.Kind.SOFT, v -> { clearAll(act, devKey, devId); reloadRows(); }), Ui.fill());
+            deadLabel = Ui.body(a, "");
             SeekBar dz = new SeekBar(a);
+            Ui.seek(a, dz);
             dz.setMax(40);   // 0..40 steps of 1% (0..0.4), enough for a stick's noise; the host default is 0.1
             dz.setProgress(Math.round(deadzonePref(act) * 100));
             deadLabel.setText("Stick dead zone " + dz.getProgress() + " %");
