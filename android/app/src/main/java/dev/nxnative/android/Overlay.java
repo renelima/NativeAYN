@@ -57,12 +57,12 @@ final class Overlay {
     /** The master switch and, below it, one switch per item (main screen dialog, in-game settings) */
     static void rows(Context c, LinearLayout box, String masterNote) {
         final List<CheckBox> items = new ArrayList<>();
-        CheckBox master = Ui.toggle(c, "Show the overlay over the game" + (masterNote != null ? masterNote : ""), Prefs.overlay(c),
+        CheckBox master = Ui.toggle(c, Lang.t(c, "Show the overlay over the game") + (masterNote != null ? masterNote : ""), Prefs.overlay(c),
                 (v, on) -> { Prefs.overlay(c, on); for (CheckBox b : items) b.setEnabled(on); });
         box.addView(master);
         int indent = Ui.dp(c, 20);
         for (String[] it : ITEMS) {
-            CheckBox b = Ui.toggle(c, it[1], Prefs.overlayItem(c, it[0]), (v, on) -> Prefs.overlayItem(c, it[0], on));
+            CheckBox b = Ui.toggle(c, Lang.t(c, it[1]), Prefs.overlayItem(c, it[0]), (v, on) -> Prefs.overlayItem(c, it[0], on));
             b.setEnabled(master.isChecked());
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
             lp.leftMargin = indent;

@@ -6,6 +6,17 @@ Histórico das releases do **NativeAYN**, o recompilador de Switch 2 para Androi
 O app é construído sobre o projeto base ([créditos em NOTICE.md](NOTICE.md)); o histórico dele antes do NativeAYN não faz parte deste arquivo — o versionamento
 do NativeAYN começa no 0.1.0. Builds de lançamento: [docs/RELEASING.md](docs/RELEASING.md).
 
+## NativeAYN 0.1.2 (2026-11-09)
+
+### Novo
+
+- **Idioma, português ou inglês**: escolha PT / EN no topo do menu do jogo (o menu se refaz no idioma na hora) e também em Home › Ajustes › Idioma. Sem escolha
+  feita, o app segue o idioma do celular. Toda a interface tem as duas línguas; o texto técnico (logs, caminhos, o editor do layout dos controles na tela)
+  fica em inglês nas duas.
+- **Ordem do menu do jogo**: Mapeamento de controle primeiro, depois Controles na tela, Overlay, e o resto.
+- **Parar o jogo**: a linha do menu pede uma única confirmação ("Parar o jogo?" → Parar / Deixar rodando) e encerra a sessão; a pausa continua só como opção
+  automática ao voltar do segundo plano, ligável/desligável em Ajustes do jogo › Pausar ao voltar.
+
 ## NativeAYN 0.1.1 (2026-11-09)
 
 ### Corrigido

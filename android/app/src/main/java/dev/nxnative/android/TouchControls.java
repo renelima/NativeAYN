@@ -62,7 +62,7 @@ final class TouchControls extends View {
     private int dragG = -1, dragId = -1, pinchId = -1;   // dragG: a group, GROUPS for the picture
     private float lastX, lastY, pinchD0, pinchS0;
     private final RectF[] tool = new RectF[5];   // the editor's buttons: Top, Centre, Bottom, Reset, Done
-    private static final String[] TOOL = {"Top", "Centre", "Bottom", "Reset", "Done"};
+    private static final String[] TOOL = {"Top", "Centre", "Bottom", "Reset", "Done"};   // painted on the canvas in the layout editor: English holds in both languages
 
     private final long[] pressed = new long[MAX], prev = new long[MAX];
     private final float[] sticks = new float[4];
@@ -295,15 +295,15 @@ final class TouchControls extends View {
 
     /** The rows for the layout, for the controls' settings: the picture's position and the editor (which runs onEditStart) */
     void layoutRows(Context ctx, LinearLayout box) {
-        box.addView(Ui.body(ctx, "Picture position (this screen)"));
-        box.addView(Ui.small(ctx, "Top and Bottom park the picture in a black bar; the controls keep the space it leaves."));
+        box.addView(Ui.body(ctx, Lang.t(ctx, "Picture position (this screen)")));
+        box.addView(Ui.small(ctx, Lang.t(ctx, "Top and Bottom park the picture in a black bar; the controls keep the space it leaves.")));
         float[] at = {0, 0.5f, 1};
         int cur = 1;
         for (int i = 0; i < 3; i++) if (Math.abs(placeY - at[i]) < 0.01f) cur = i;
-        android.widget.RadioGroup rg = Ui.pillGroup(ctx, new String[]{"Top", "Centre", "Bottom"}, cur,
+        android.widget.RadioGroup rg = Ui.pillGroup(ctx, new String[]{"Top", Lang.t(ctx, "Centre"), "Bottom"}, cur,
                 (g, id) -> setPicturePosition(at[id - 1000]));
         box.addView(rg);
-        box.addView(Ui.action(ctx, dev.nxnative.android.R.drawable.ic_chevron, "Edit the controls layout", Ui.Kind.TONAL, v -> startEditLayout()), Ui.fill());
+        box.addView(Ui.action(ctx, dev.nxnative.android.R.drawable.ic_chevron, Lang.t(ctx, "Edit the controls layout"), Ui.Kind.TONAL, v -> startEditLayout()), Ui.fill());
     }
 
     // ---- The editor's touches ----
@@ -531,15 +531,15 @@ final class TouchControls extends View {
     // ---- Settings: opacity, size and the haptic tick, kept in the app's preferences ----
     /** The on-screen controls' rows of the in-game panel: show or hide the buttons, opacity, size, the haptic tick, the log over the game, and Reset */
     void controlRows(Context ctx, LinearLayout box) {
-        CheckBox sb = Ui.toggle(ctx, "Show the on-screen buttons", shown, (b, v) -> setShown(v));
+        CheckBox sb = Ui.toggle(ctx, Lang.t(ctx, "Show the on-screen buttons"), shown, (b, v) -> setShown(v));
         TextView ol = Ui.body(ctx, ""), sl = Ui.body(ctx, "");
         SeekBar os = new SeekBar(ctx), ss = new SeekBar(ctx);
         Ui.seek(ctx, os); Ui.seek(ctx, ss);
         os.setMax(90); os.setProgress(Math.round(opacity * 100) - 10);   // 10..100 %
         ss.setMax(90); ss.setProgress(Math.round(scale * 100) - 60);     // 60..150 %
-        CheckBox hb = Ui.toggle(ctx, "Vibrate on press", haptics, (b, v) -> { haptics = v; save(); });
-        CheckBox lb = Ui.toggle(ctx, "Show the log over the game", showLog(ctx), (b, v) -> prefs().edit().putBoolean("log", v).commit());
-        Runnable labels = () -> { ol.setText("Opacity " + (os.getProgress() + 10) + " %"); sl.setText("Size " + (ss.getProgress() + 60) + " %"); };
+        CheckBox hb = Ui.toggle(ctx, Lang.t(ctx, "Vibrate on press"), haptics, (b, v) -> { haptics = v; save(); });
+        CheckBox lb = Ui.toggle(ctx, Lang.t(ctx, "Show the log over the game"), showLog(ctx), (b, v) -> prefs().edit().putBoolean("log", v).commit());
+        Runnable labels = () -> { ol.setText(Lang.t(ctx, "Opacity ") + (os.getProgress() + 10) + " %"); sl.setText(Lang.t(ctx, "Size ") + (ss.getProgress() + 60) + " %"); };
         labels.run();
         SeekBar.OnSeekBarChangeListener live = new SeekBar.OnSeekBarChangeListener() {
             @Override public void onProgressChanged(SeekBar b, int v, boolean user) {
@@ -556,7 +556,7 @@ final class TouchControls extends View {
         os.setOnSeekBarChangeListener(live);
         ss.setOnSeekBarChangeListener(live);
         box.addView(sb); box.addView(ol); box.addView(os); box.addView(sl); box.addView(ss); box.addView(hb); box.addView(lb);
-        box.addView(Ui.button(ctx, "Reset the controls", Ui.Kind.SOFT, v -> { sb.setChecked(true); os.setProgress(50); ss.setProgress(40); hb.setChecked(true); }), Ui.fill());   // the buttons on, 60 % opacity, 100 % size, the tick on
+        box.addView(Ui.button(ctx, Lang.t(ctx, "Reset the controls"), Ui.Kind.SOFT, v -> { sb.setChecked(true); os.setProgress(50); ss.setProgress(40); hb.setChecked(true); }), Ui.fill());   // the buttons on, 60 % opacity, 100 % size, the tick on
         layoutRows(ctx, box);   // the picture position and the layout editor
     }
 

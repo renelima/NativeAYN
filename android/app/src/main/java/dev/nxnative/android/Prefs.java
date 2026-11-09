@@ -17,6 +17,14 @@ final class Prefs {
     static SharedPreferences open(Context c, String name) { return c.getSharedPreferences(name, Context.MODE_MULTI_PROCESS); }
     static SharedPreferences of(Context c) { return open(c, "launcher"); }
 
+    /** The app's language, "en" or "pt" (Lang): the player's pick; unset it follows the device (a Portuguese device starts in Portuguese) */
+    static String lang(Context c) {
+        String v = of(c).getString("lang", null);
+        if (v != null) return v;
+        return "pt".equals(java.util.Locale.getDefault().getLanguage()) ? "pt" : "en";
+    }
+    static void lang(Context c, String lang) { of(c).edit().putString("lang", lang).commit(); }
+
     /** The overlay over the game (master switch: the frame rate and the other items top right, Overlay; the build tag top left is always shown); on by default. DM_OVERLAY=0 / 1 in env.txt overrides it for a run. */
     static boolean overlay(Context c) { return of(c).getBoolean("overlay", true); }
     static void overlay(Context c, boolean on) { of(c).edit().putBoolean("overlay", on).commit(); }

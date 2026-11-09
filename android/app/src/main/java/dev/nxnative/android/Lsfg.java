@@ -108,19 +108,19 @@ final class Lsfg {
 
     /** The settings rows (main screen dialog and the in-game panel); apply runs after each change (in game: Native.frameGenSet). showHead adds the section label (the panel draws its own). Returns the status line (null without LSFG in this build) */
     static TextView rows(Context c, LinearLayout box, String status, Runnable apply, boolean showHead) {
-        if (showHead) box.addView(Ui.section(c, "Frame generation (Lossless Scaling)"));
-        else box.addView(Ui.small(c, "Lossless Scaling, your own Lossless.dll"));
-        if (!BuildConfig.NX_LSFG) { box.addView(Ui.small(c, "Not in this build (built with -PnxLsfg=false).")); return null; }
-        box.addView(Ui.toggle(c, "Frame generation (LSFG)", on(c), (b, v) -> { prefs(c).edit().putBoolean("lsfg", v).commit(); apply.run(); }));
+        if (showHead) box.addView(Ui.section(c, Lang.t(c, "Frame generation (Lossless Scaling)")));
+        else box.addView(Ui.small(c, Lang.t(c, "Lossless Scaling, your own Lossless.dll")));
+        if (!BuildConfig.NX_LSFG) { box.addView(Ui.small(c, Lang.t(c, "Not in this build (built with -PnxLsfg=false)."))); return null; }
+        box.addView(Ui.toggle(c, Lang.t(c, "Frame generation (LSFG)"), on(c), (b, v) -> { prefs(c).edit().putBoolean("lsfg", v).commit(); apply.run(); }));
         TextView st = Ui.small(c, status);
         box.addView(st);
-        box.addView(Ui.body(c, "Frames per game frame"));
+        box.addView(Ui.body(c, Lang.t(c, "Frames per game frame")));
         box.addView(choice(c, MULTS, multiplier(c), new String[]{"2x", "3x", "4x"}, v -> { prefs(c).edit().putInt("lsfg_mult", v).commit(); apply.run(); }));
-        box.addView(Ui.body(c, "Target frame rate (the multiplier follows it)"));
-        box.addView(choice(c, TARGETS, target(c), new String[]{"Fixed", "60", "90", "120"}, v -> { prefs(c).edit().putInt("lsfg_target", v).commit(); apply.run(); }));
-        box.addView(Ui.small(c, "Motion estimation resolution (lower is faster; Auto = the game's own)"));
-        box.addView(choice(c, FLOWS, flow(c), new String[]{"Auto", "25%", "50%", "75%", "100%"}, v -> { prefs(c).edit().putInt("lsfg_flow", v).commit(); apply.run(); }));
-        box.addView(Ui.small(c, "Mode: performance (the only shader set Eden's LSFG uses)"));   // Eden ports only the performance shader set (lossless_dll.h PerformanceShader); the quality set would need its own chain
+        box.addView(Ui.body(c, Lang.t(c, "Target frame rate (the multiplier follows it)")));
+        box.addView(choice(c, TARGETS, target(c), new String[]{Lang.t(c, "Fixed"), "60", "90", "120"}, v -> { prefs(c).edit().putInt("lsfg_target", v).commit(); apply.run(); }));
+        box.addView(Ui.small(c, Lang.t(c, "Motion estimation resolution (lower is faster; Auto = the game's own)")));
+        box.addView(choice(c, FLOWS, flow(c), new String[]{Lang.t(c, "Auto"), "25%", "50%", "75%", "100%"}, v -> { prefs(c).edit().putInt("lsfg_flow", v).commit(); apply.run(); }));
+        box.addView(Ui.small(c, Lang.t(c, "Mode: performance (the only shader set Eden's LSFG uses)")));   // Eden ports only the performance shader set (lossless_dll.h PerformanceShader); the quality set would need its own chain
         return st;
     }
 

@@ -39,11 +39,11 @@ final class Fsr {
 
     /** The in-game panel's rows: on / off and the sharpness, each applied at once. showHead adds the section label (the panel draws its own) */
     static void rows(Context c, LinearLayout box, boolean showHead) {
-        if (showHead) box.addView(Ui.section(c, "Upscaling"));
-        box.addView(Ui.toggle(c, "FSR 1 (sharper when the picture is scaled up to the screen)", on(c),
+        if (showHead) box.addView(Ui.section(c, Lang.t(c, "Upscaling")));
+        box.addView(Ui.toggle(c, Lang.t(c, "FSR 1 (sharper when the picture is scaled up to the screen)"), on(c),
                 (b, v) -> { Prefs.of(c).edit().putBoolean("fsr", v).commit(); push(c); }));
-        box.addView(Ui.body(c, "Sharpness"));
-        String[] labels = {"Max", "Default", "Soft", "Softer"};
+        box.addView(Ui.body(c, Lang.t(c, "Sharpness")));
+        String[] labels = {"Max", Lang.t(c, "Default"), "Soft", "Softer"};
         int cur = 1;
         for (int i = 0; i < SHARPS.length; i++) if (SHARPS[i] == sharp(c)) cur = i;
         box.addView(Ui.pillGroup(c, labels, cur,

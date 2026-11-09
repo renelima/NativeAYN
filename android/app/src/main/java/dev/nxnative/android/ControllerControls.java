@@ -29,32 +29,32 @@ final class ControllerControls {
             1 << 13, 1 << 15, 1 << 12, 1 << 14};
     private static final int ROWS = TARGET_NAME.length;
 
-    /** The key codes' names in the rows, the Android gamepad keys and the D-pad first; the code number still follows, an unusual key is still identifiable */
-    private static String keyName(int code) {
+    /** The key codes' names in the rows, the Android gamepad keys and the D-pad first; the code number still follows, an unusual key is still identifiable. The names come through Lang for the pt rows. */
+    private static String keyName(Context c, int code) {
         switch (code) {
-            case KeyEvent.KEYCODE_DPAD_UP: return "D-pad up";
-            case KeyEvent.KEYCODE_DPAD_DOWN: return "D-pad down";
-            case KeyEvent.KEYCODE_DPAD_LEFT: return "D-pad left";
-            case KeyEvent.KEYCODE_DPAD_RIGHT: return "D-pad right";
-            case KeyEvent.KEYCODE_DPAD_CENTER: return "D-pad centre";
-            case KeyEvent.KEYCODE_BUTTON_A: return "Button A (bottom)";
-            case KeyEvent.KEYCODE_BUTTON_B: return "Button B (right)";
-            case KeyEvent.KEYCODE_BUTTON_X: return "Button X (left)";
-            case KeyEvent.KEYCODE_BUTTON_Y: return "Button Y (top)";
-            case KeyEvent.KEYCODE_BUTTON_L1: return "Button L1";
-            case KeyEvent.KEYCODE_BUTTON_R1: return "Button R1";
-            case KeyEvent.KEYCODE_BUTTON_L2: return "Button L2";
-            case KeyEvent.KEYCODE_BUTTON_R2: return "Button R2";
-            case KeyEvent.KEYCODE_BUTTON_THUMBL: return "Left stick click";
-            case KeyEvent.KEYCODE_BUTTON_THUMBR: return "Right stick click";
-            case KeyEvent.KEYCODE_BUTTON_START: return "Start";
-            case KeyEvent.KEYCODE_BUTTON_SELECT: return "Select";
-            case KeyEvent.KEYCODE_BUTTON_MODE: return "Home / guide";
-            case KeyEvent.KEYCODE_BUTTON_C: return "Button C";
-            case KeyEvent.KEYCODE_BUTTON_Z: return "Button Z";
-            case KeyEvent.KEYCODE_BACK: return "Back";
-            case KeyEvent.KEYCODE_ESCAPE: return "Escape";
-            default: return "key " + code;
+            case KeyEvent.KEYCODE_DPAD_UP: return Lang.t(c, "D-pad up");
+            case KeyEvent.KEYCODE_DPAD_DOWN: return Lang.t(c, "D-pad down");
+            case KeyEvent.KEYCODE_DPAD_LEFT: return Lang.t(c, "D-pad left");
+            case KeyEvent.KEYCODE_DPAD_RIGHT: return Lang.t(c, "D-pad right");
+            case KeyEvent.KEYCODE_DPAD_CENTER: return Lang.t(c, "D-pad centre");
+            case KeyEvent.KEYCODE_BUTTON_A: return Lang.t(c, "Button A (bottom)");
+            case KeyEvent.KEYCODE_BUTTON_B: return Lang.t(c, "Button B (right)");
+            case KeyEvent.KEYCODE_BUTTON_X: return Lang.t(c, "Button X (left)");
+            case KeyEvent.KEYCODE_BUTTON_Y: return Lang.t(c, "Button Y (top)");
+            case KeyEvent.KEYCODE_BUTTON_L1: return Lang.t(c, "Button L1");
+            case KeyEvent.KEYCODE_BUTTON_R1: return Lang.t(c, "Button R1");
+            case KeyEvent.KEYCODE_BUTTON_L2: return Lang.t(c, "Button L2");
+            case KeyEvent.KEYCODE_BUTTON_R2: return Lang.t(c, "Button R2");
+            case KeyEvent.KEYCODE_BUTTON_THUMBL: return Lang.t(c, "Left stick click");
+            case KeyEvent.KEYCODE_BUTTON_THUMBR: return Lang.t(c, "Right stick click");
+            case KeyEvent.KEYCODE_BUTTON_START: return Lang.t(c, "Start");
+            case KeyEvent.KEYCODE_BUTTON_SELECT: return Lang.t(c, "Select");
+            case KeyEvent.KEYCODE_BUTTON_MODE: return Lang.t(c, "Home / guide");
+            case KeyEvent.KEYCODE_BUTTON_C: return Lang.t(c, "Button C");
+            case KeyEvent.KEYCODE_BUTTON_Z: return Lang.t(c, "Button Z");
+            case KeyEvent.KEYCODE_BACK: return Lang.t(c, "Back");
+            case KeyEvent.KEYCODE_ESCAPE: return Lang.t(c, "Escape");
+            default: return Lang.t(c, "key ") + code;
         }
     }
 
@@ -192,7 +192,7 @@ final class ControllerControls {
         devKey = devId >= 0 ? deviceKey(InputDevice.getDevice(devId)) : null;
         String name = devKey == null ? null : prefs(act).getString("name@" + devKey, null);
         if (devKey == null) {
-            box.addView(Ui.small(a, "No controller is connected. Connect one and press its buttons here to map them; the map is kept for it."));
+            box.addView(Ui.small(a, Lang.t(a, "No controller is connected. Connect one and press its buttons here to map them; the map is kept for it.")));
         } else {
             status = Ui.small(a, "");
             box.addView(status);
@@ -203,19 +203,19 @@ final class ControllerControls {
                 row[i].setTextSize(13);
                 final int r = i;   // the loop variable is not effectively final: the rows' lambdas use this copy
                 row[i].setOnClickListener(v -> startCapture(r));
-                Button reset = Ui.button(a, "Reset", Ui.Kind.QUIET, 44, v -> { unbindRow(act, devKey, devId, r); reloadRows(); });
+                Button reset = Ui.button(a, Lang.t(a, "Reset"), Ui.Kind.QUIET, 44, v -> { unbindRow(act, devKey, devId, r); reloadRows(); });
                 LinearLayout.LayoutParams grow = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
                 line.addView(row[i], grow);
                 line.addView(reset, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT));
                 box.addView(line);
             }
-            box.addView(Ui.button(a, "Clear all (back to the default table)", Ui.Kind.SOFT, v -> { clearAll(act, devKey, devId); reloadRows(); }), Ui.fill());
+            box.addView(Ui.button(a, Lang.t(a, "Clear all (back to the default table)"), Ui.Kind.SOFT, v -> { clearAll(act, devKey, devId); reloadRows(); }), Ui.fill());
             deadLabel = Ui.body(a, "");
             SeekBar dz = new SeekBar(a);
             Ui.seek(a, dz);
             dz.setMax(40);   // 0..40 steps of 1% (0..0.4), enough for a stick's noise; the host default is 0.1
             dz.setProgress(Math.round(deadzonePref(act) * 100));
-            deadLabel.setText("Stick dead zone " + dz.getProgress() + " %");
+            deadLabel.setText(Lang.t(a, "Stick dead zone ") + dz.getProgress() + " %");
             dz.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
                 @Override public void onProgressChanged(SeekBar b, int v, boolean user) {
                     deadLabel.setText("Stick dead zone " + v + " %");
@@ -239,12 +239,12 @@ final class ControllerControls {
         ArrayList<String> map = savedMap(act, devKey);
         for (int i = 0; i < ROWS; i++) {
             rowCode[i] = boundKey(map, i);
-            row[i].setText(TARGET_NAME[i] + ": " + (rowCode[i] == 0 ? "default" : keyName(rowCode[i])));
+            row[i].setText(Lang.t(act, TARGET_NAME[i]) + ": " + (rowCode[i] == 0 ? Lang.t(act, "default") : keyName(act, rowCode[i])));
         }
         if (status == null) return;
-        String name = prefs(act).getString("name@" + devKey, "the controller");
-        status.setText(captureRow >= 0 ? "Press a button on " + name + " for \"" + TARGET_NAME[captureRow] + "\" (Back or Escape cancels)"
-                : "Tap a row, then press the button you want for it on " + name + ".");
+        String name = prefs(act).getString("name@" + devKey, Lang.t(act, "the controller"));
+        status.setText(captureRow >= 0 ? Lang.t(act, "Press a button on ") + name + Lang.t(act, " for \"") + Lang.t(act, TARGET_NAME[captureRow]) + Lang.t(act, "\" (Back or Escape cancels)")
+                : Lang.t(act, "Tap a row, then press the button you want for it on ") + name + ".");
     }
 
     private void startCapture(int i) {
@@ -281,12 +281,12 @@ final class ControllerControls {
         long want = TARGET_BTN[p.captureRow];
         ArrayList<String> map = savedMap(p.act, p.devKey);
         if (bindsOther(map, code, want)) {
-            if (p.status != null) p.status.setText("Key " + keyName(code) + " already does another button: press a different key, or Reset that row first.");
+            if (p.status != null) p.status.setText(Lang.t(p.act, "Key ") + keyName(p.act, code) + Lang.t(p.act, " already does another button: press a different key, or Reset that row first."));
             return true;   // still capturing, waiting for another press
         }
         bindKey(map, code, want, p.captureRow);
         applyMap(p.act, p.devKey, p.devId, map);
-        Native.note("[controller] " + TARGET_NAME[p.captureRow] + " = " + keyName(code) + (p.devId < 0 ? " (saved: no pad connected)" : " (sent to the pad)"));
+        Native.note("[controller] " + TARGET_NAME[p.captureRow] + " = " + keyName(null, code) + (p.devId < 0 ? " (saved: no pad connected)" : " (sent to the pad)"));   // the log stays English
         p.captureKey = code;   // ends on the release, so a held button cannot assign twice
         p.reloadRows();
         return true;

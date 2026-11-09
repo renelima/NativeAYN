@@ -195,11 +195,11 @@ final class Updater {
     /** Settings › Updates › Check for updates: the popup when a newer release exists, else "You're up to date" */
     static void checkNow(Activity a) {
         if (!available(a)) {
-            msg(a, "Updates", "This app does not check for updates (only the NativeAYN app and the release do). A test app checks when update.txt in its files folder names repo= or url=.");
+            msg(a, Lang.t(a, "Updates"), "This app does not check for updates (only the NativeAYN app and the release do). A test app checks when update.txt in its files folder names repo= or url=.");
             return;
         }
         int[] cur = UpdateCheck.appVersion(version(a));
-        if (cur == null) { msg(a, "Updates", "This build's version (" + version(a) + ") is not a release version: nothing to compare."); return; }
+        if (cur == null) { msg(a, Lang.t(a, "Updates"), Lang.t(a, "This build's version (") + version(a) + Lang.t(a, ") is not a release version: nothing to compare.")); return; }
         AlertDialog wait = new AlertDialog.Builder(a).setMessage("Checking for updates…").setCancelable(false).create();
         wait.show();
         Context app = a.getApplicationContext();
@@ -211,8 +211,8 @@ final class Updater {
             UI.post(() -> {
                 if (gone(a)) return;
                 wait.dismiss();
-                if (fail != null) Toast.makeText(a, "Update check failed: " + fail, Toast.LENGTH_LONG).show();
-                else if (got == null) Toast.makeText(a, "You're up to date (v" + UpdateCheck.text(cur) + ")", Toast.LENGTH_LONG).show();
+                if (fail != null) Toast.makeText(a, Lang.t(a, "Update check failed: ") + fail, Toast.LENGTH_LONG).show();
+                else if (got == null) Toast.makeText(a, Lang.t(a, "You're up to date (v") + UpdateCheck.text(cur) + ")", Toast.LENGTH_LONG).show();
                 else popup(a, got);
             });
         }, "nx-update-check").start();
@@ -226,7 +226,7 @@ final class Updater {
         LinearLayout box = new LinearLayout(a);
         box.setOrientation(LinearLayout.VERTICAL);
         box.setPadding(p, Ui.dp(a, 4), p, Ui.dp(a, 8));
-        box.addView(Ui.body(a, "Version " + UpdateCheck.text(u.version) + " is available (you have " + version(a) + ")."));
+        box.addView(Ui.body(a, Lang.t(a, "Version ") + UpdateCheck.text(u.version) + Lang.t(a, " is available (you have ") + version(a) + ")."));
         CharSequence notes = styled(a, ReleaseNotes.parse(u.release.body));
         if (notes.length() > 0) {
             TextView t = Ui.text(a, notes, 14, R.color.bn_text, 400);
@@ -243,10 +243,10 @@ final class Updater {
             sv.addView(t);
             Ui.add(box, sv, 12);
         }
-        Ui.add(box, Ui.small(a, u.apk.name + " · " + UpdateCheck.mb(u.apk.size) + " · from GitHub"), 10);
-        new AlertDialog.Builder(a).setTitle("Update available").setView(box)
-                .setPositiveButton("Update", (d, w) -> download(a, u))
-                .setNegativeButton("Later", null)
+        Ui.add(box, Ui.small(a, u.apk.name + " · " + UpdateCheck.mb(u.apk.size) + Lang.t(a, " · from GitHub")), 10);
+        new AlertDialog.Builder(a).setTitle(Lang.t(a, "Update available")).setView(box)
+                .setPositiveButton(Lang.t(a, "Update"), (d, w) -> download(a, u))
+                .setNegativeButton(Lang.t(a, "Later"), null)
                 .show();
     }
 
@@ -320,7 +320,7 @@ final class Updater {
         bar.setMax(1000);
         Ui.add(box, bar, 12);
         final boolean[] cancel = {false};
-        AlertDialog d = Ui.sheet(a, "Downloading " + u.tag(), box).setCancelable(false).setNegativeButton("Cancel", (x, w) -> cancel[0] = true).show();
+        AlertDialog d = Ui.sheet(a, Lang.t(a, "Downloading ") + u.tag(), box).setCancelable(false).setNegativeButton(Lang.t(a, "Cancel"), (x, w) -> cancel[0] = true).show();
         Context app = a.getApplicationContext();
         new Thread(() -> {
             File f = null; String err = null;
@@ -385,7 +385,7 @@ final class Updater {
             new AlertDialog.Builder(a).setTitle("Allow installs")
                     .setMessage("To install the update, allow NativeAYN to install apps (\"Install unknown apps\"), then come back.")
                     .setPositiveButton("Open settings", (d, w) -> a.startActivity(new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:" + a.getPackageName()))))
-                    .setNegativeButton("Cancel", (d, w) -> { pending = null; apk.delete(); })
+                    .setNegativeButton(Lang.t(a, "Cancel"), (d, w) -> { pending = null; apk.delete(); })
                     .setCancelable(false).show();
             return;
         }
