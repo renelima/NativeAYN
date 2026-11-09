@@ -207,7 +207,7 @@ public final class MainActivity extends Activity {
     /** The settings rows' current values (after a dialog, on resume) */
     private void refreshSettings() {
         if (overlayRow == null) return;
-        updateRow.value("NativeAYN " + Updater.version(this) + (Updater.available(this) ? "" : " · release app only"));
+        updateRow.value("NativeAYN " + Updater.version(this) + (Updater.available(this) ? "" : " · checks off"));
         boolean ov = Prefs.overlay(this);
         if (overlayRow.toggle.isChecked() != ov) overlayRow.toggle.setChecked(ov);
         int n = 0;

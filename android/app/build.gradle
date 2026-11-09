@@ -122,6 +122,8 @@ android {
         buildConfigField 'boolean', 'NX_PLAY', "${nxPlay || nxLive}"
         // The public release (dev.ankanative.android) alone checks GitHub for a newer release at start (Updater; a test app only through its update.txt)
         buildConfigField 'boolean', 'NX_LIVE', "$nxLive"
+        // A renamed product app (-PnxAppId, e.g. dev.nativeayn.android) checks its own GitHub releases too, debug builds included (Updater.available)
+        buildConfigField 'boolean', 'NX_PRODUCT', "${nxAppId != ''}"
         // The shader library the host loads: <pack>/shaders/v-<DMSH_VK_CHAIN>/dmsh_vk.lib (vka_shader.c); the launcher checks a pack has it before starting the game
         buildConfigField 'String', 'NX_DMSH_CHAIN', "\"${defineOf('dm/gfx/nvn/dmsh_chain.h', 'DMSH_CHAIN')}\""
         buildConfigField 'String', 'NX_DMSH_VK_CHAIN', "\"${defineOf('dm/gfx/nvn/dmsh_chain_vk.h', 'DMSH_VK_CHAIN')}\""

@@ -55,15 +55,17 @@ import java.util.Locale;
 import javax.net.ssl.HttpsURLConnection;
 
 /**
- * The in-app updater (release app only, dev.ankanative.android). Once per app start (a new process: not on a resume or a rotation), Home asks GitHub's releases
- * API for the public releases of EddizEge/AnkaNative (the list, not /releases/latest: every release is a pre-release, which /latest skips); when one is newer than
+ * The in-app updater. Once per app start (a new process: not on a resume or a rotation), Home asks GitHub's releases
+ * API for the public releases of renelima/NativeAYN (the list, not /releases/latest: every release is a pre-release, which /latest skips); when one is newer than
  * this app (UpdateCheck.pick) a popup offers Update or Later. Update downloads the release's own APK through its browser_download_url (so
  * GitHub's download count counts it; nothing is mirrored) into the cache, checks its size and its SHA-256 against the API's digest, and installs it with
  * PackageInstaller; Android asks the player to confirm, and first to allow installs from this app when that is off. A check that fails says nothing (a log line).
  * <p>
- * Test apps never check, unless their files folder (Android/data/&lt;app&gt;/files/update.txt, adb) holds KEY=VALUE lines: repo=&lt;owner/name&gt; (another GitHub
+ * The NativeAYN app itself (package dev.nativeayn.android) always checks, debug builds included — its GitHub releases are what players install. Test apps
+ * never check, unless their files folder (Android/data/&lt;app&gt;/files/update.txt, adb) holds KEY=VALUE lines: repo=&lt;owner/name&gt; (another GitHub
  * repository), url=&lt;https URL of a releases list in the API's JSON&gt;, version=&lt;X.Y.Z the app takes as its own&gt; (a test app's versionName is no release
- * version). Settings › Updates › Check for updates checks at once.
+ * version). Settings › Updates › Check for updates checks at once. An update installs over the running app, so it only works when both are signed with the
+ * same key: the APKs the releases carry now share the debug key, and a build signed with the release key updates only one signed the same way.
  */
 final class Updater {
     private Updater() {}
@@ -101,9 +103,9 @@ final class Updater {
         return m;
     }
 
-    /** Whether this app checks at all: the release app, or a test app with an update.txt naming a repository or a URL */
+    /** Whether this app checks at all: the release app or a renamed product app (-PnxAppId), or a test app with an update.txt naming a repository or a URL */
     static boolean available(Context c) {
-        if (BuildConfig.NX_LIVE) return true;
+        if (BuildConfig.NX_LIVE || BuildConfig.NX_PRODUCT) return true;
         java.util.Map<String, String> o = override(c);
         return o.containsKey("repo") || o.containsKey("url");
     }
@@ -193,7 +195,7 @@ final class Updater {
     /** Settings › Updates › Check for updates: the popup when a newer release exists, else "You're up to date" */
     static void checkNow(Activity a) {
         if (!available(a)) {
-            msg(a, "Updates", "Only the release app (dev.ankanative.android) checks for updates. A test app checks when update.txt in its files folder names repo= or url=.");
+            msg(a, "Updates", "This app does not check for updates (only the NativeAYN app and the release do). A test app checks when update.txt in its files folder names repo= or url=.");
             return;
         }
         int[] cur = UpdateCheck.appVersion(version(a));
