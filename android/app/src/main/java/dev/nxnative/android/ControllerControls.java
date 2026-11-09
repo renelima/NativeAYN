@@ -199,11 +199,11 @@ final class ControllerControls {
             for (int i = 0; i < ROWS; i++) {
                 LinearLayout line = new LinearLayout(a);
                 line.setOrientation(LinearLayout.HORIZONTAL);
-                row[i] = Ui.button(a, "", Ui.Kind.SOFT, null);
+                row[i] = Ui.button(a, "", Ui.Kind.SOFT, 44, null);
                 row[i].setTextSize(13);
                 final int r = i;   // the loop variable is not effectively final: the rows' lambdas use this copy
                 row[i].setOnClickListener(v -> startCapture(r));
-                Button reset = Ui.button(a, "Reset", Ui.Kind.QUIET, v -> { unbindRow(act, devKey, devId, r); reloadRows(); });
+                Button reset = Ui.button(a, "Reset", Ui.Kind.QUIET, 44, v -> { unbindRow(act, devKey, devId, r); reloadRows(); });
                 LinearLayout.LayoutParams grow = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
                 line.addView(row[i], grow);
                 line.addView(reset, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT));

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Controller mapping: a targeting reticle (a ring with its inside cut out, plus the ticks and the centre), tinted in code (Ui.panelRow) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
+    <path android:fillColor="#FF000000" android:fillType="evenOdd" android:pathData="M3.5,12 a8.5,8.5 0 1 0 17,0 a8.5,8.5 0 1 0 -17,0 Z M7,12 a5,5 0 1 0 10,0 a5,5 0 1 0 -10,0 Z" />
+    <path android:fillColor="#FF000000" android:pathData="M11,2 h2 v4.2 h-2 z M11,17.8 h2 v4.2 h-2 z M2,11 h4.2 v2 h-4.2 z M17.8,11 h4.2 v2 h-4.2 z M10.6,12 a1.4,1.4 0 1 0 2.8,0 a1.4,1.4 0 1 0 -2.8,0 Z" />
+</vector>

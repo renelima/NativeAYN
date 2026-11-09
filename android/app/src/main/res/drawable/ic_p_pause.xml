@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pause or stop: two clean pause bars, tinted in code (Ui.panelRow) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
+    <path android:fillColor="#FF000000" android:pathData="M7.5,4.5 H10.7 V19.5 H7.5 Z M13.3,4.5 H16.5 V19.5 H13.3 Z" />
+</vector>

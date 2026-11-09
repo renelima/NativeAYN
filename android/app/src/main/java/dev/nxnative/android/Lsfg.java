@@ -106,11 +106,10 @@ final class Lsfg {
         return Ui.pillGroup(c, labels, at, (g, id) -> pick.accept(values[id - 1000]));
     }
 
-    /** The settings rows (main screen dialog and the in-game panel); apply runs after each change (in game: Native.frameGenSet). Returns the status line (null without LSFG in this build) */
-    static TextView rows(Context c, LinearLayout box, String status, Runnable apply) {
-        TextView head = Ui.section(c, "Frame generation (Lossless Scaling, your own Lossless.dll)");
-        head.setPadding(head.getPaddingLeft(), Ui.dp(c, 20), 0, 0);
-        box.addView(head);
+    /** The settings rows (main screen dialog and the in-game panel); apply runs after each change (in game: Native.frameGenSet). showHead adds the section label (the panel draws its own). Returns the status line (null without LSFG in this build) */
+    static TextView rows(Context c, LinearLayout box, String status, Runnable apply, boolean showHead) {
+        if (showHead) box.addView(Ui.section(c, "Frame generation (Lossless Scaling)"));
+        else box.addView(Ui.small(c, "Lossless Scaling, your own Lossless.dll"));
         if (!BuildConfig.NX_LSFG) { box.addView(Ui.small(c, "Not in this build (built with -PnxLsfg=false).")); return null; }
         box.addView(Ui.toggle(c, "Frame generation (LSFG)", on(c), (b, v) -> { prefs(c).edit().putBoolean("lsfg", v).commit(); apply.run(); }));
         TextView st = Ui.small(c, status);

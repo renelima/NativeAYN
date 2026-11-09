@@ -6,29 +6,26 @@ import android.graphics.drawable.GradientDrawable;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.View;
-import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
-import android.widget.RadioGroup;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
 /**
- * The in-game panel: slides in from the right over the running game, which goes on behind it. It holds the frame rate cap (Native.fpsCapSet), frame generation
- * (Lsfg.rows, Native.frameGenSet), FSR 1 upscaling (Fsr.rows), the overlay's items (Overlay.rows), the on-screen controls' rows (TouchControls.controlRows), the intro skip (Native.skipSet, where it is armed and in the test app) and Stop. Every change applies at once,
- * without going back to the launcher, and is kept for the next start. Opened by its handle at the right edge, by Back (the phone's button or its edge swipe) or a gamepad's Home /
- * guide button (KEYCODE_BUTTON_MODE); closed the same ways, by a tap beside it, or by B on a gamepad, whose D-pad and A move
- * through it meanwhile (GameActivity.dispatchKeyEvent).
+ * The in-game menu: slides in from the right over the running game, which goes on behind it. It is a game pause menu in look and shape — one row per setting, each with an
+ * icon tile, its name, its current state as a subtitle and a chevron; the row opens a dialog with the full controls (the frame rate cap, frame generation (Lsfg.rows),
+ * FSR 1 upscaling (Fsr.rows), the overlay's items (Overlay.rows), the on-screen controls' rows (TouchControls.controlRows), the controller mapping (ControllerControls),
+ * the intro skip and Pause / Stop). Every change applies at once, without going back to the launcher, and is kept for the next start. Opened by its handle at the right
+ * edge, by Back (the phone's button or its edge swipe) or a gamepad's Home / guide button (KEYCODE_BUTTON_MODE); closed the same ways, by a tap beside it, or by B on a
+ * gamepad, whose D-pad and A move through it meanwhile (GameActivity.dispatchKeyEvent).
  */
 final class SidePanel extends FrameLayout {
     private final Activity act;
     private final LinearLayout box;
     private final View sheet;
-    private final java.util.function.Consumer<LinearLayout> fill;
-    private TextView fpsNow, lsfgNow;
-    private RadioGroup caps;
+    private final java.util.function.Consumer<LinearLayout> fill;   // GameActivity: TouchControls.controlRows, which the on-screen controls dialog reuses
+    private final TextView[] capSub = new TextView[1], genSub = new TextView[1], upSub = new TextView[1], ovlSub = new TextView[1], ctlSub = new TextView[1], padSub = new TextView[1], skipSub = new TextView[1], gameSub = new TextView[1];
     private boolean open;
-    private final Runnable tick = this::refresh;
 
     SidePanel(Activity a, java.util.function.Consumer<LinearLayout> fill) {
         super(a);
@@ -48,7 +45,7 @@ final class SidePanel extends FrameLayout {
         sv.addView(box);
         int w = Math.round(Math.min(420 * dp, a.getResources().getDisplayMetrics().widthPixels * 0.55f));
         addView(sv, new LayoutParams(w, LayoutParams.MATCH_PARENT, Gravity.END));
-        View edge = new View(a);   // the teal edge: this panel belongs to NativeAYN, the same accent rule as the Home header
+        View edge = new View(a);   // the teal edge: this menu belongs to NativeAYN, the same accent rule as the Home header
         edge.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, new int[]{0xFF2DD4BF, 0x002DD4BF}));
         addView(edge, new LayoutParams(Math.round(2 * dp), LayoutParams.MATCH_PARENT, Gravity.END));
         sheet = sv;
@@ -67,8 +64,6 @@ final class SidePanel extends FrameLayout {
         sheet.setTranslationX(sheet.getLayoutParams().width);
         sheet.animate().translationX(0).setDuration(180).start();
         box.post(() -> { View f = box.focusSearch(View.FOCUS_DOWN); if (f != null) f.requestFocus(); else box.requestFocus(); });
-        removeCallbacks(tick);
-        refresh();
     }
 
     void close() {
@@ -78,7 +73,7 @@ final class SidePanel extends FrameLayout {
         sheet.animate().translationX(sheet.getLayoutParams().width).setDuration(150).withEndAction(() -> { if (!open) setVisibility(GONE); }).start();
     }
 
-    /** A gamepad key while the panel is open: B closes it, A presses what has focus, the D-pad moves the focus (the view system's own handling) */
+    /** A gamepad key while the menu is open: B closes it, A presses what has focus, the D-pad moves the focus (the view system's own handling) */
     boolean padKey(KeyEvent e) {
         int k = e.getKeyCode();
         if (k == KeyEvent.KEYCODE_BUTTON_B) { if (e.getAction() == KeyEvent.ACTION_UP) close(); return true; }
@@ -90,25 +85,26 @@ final class SidePanel extends FrameLayout {
         return false;
     }
 
-    private TextView head(String t) {
-        TextView h = Ui.section(act, t);   // the same bracket label the launcher's sections use: 12 sp caps, teal bracket
-        h.setPadding(h.getPaddingLeft(), Math.round(20 * getResources().getDisplayMetrics().density), 0, 0);
-        box.addView(h);
-        return h;
-    }
-
-    private TextView note(String t) {
-        TextView n = Ui.small(act, t);
-        n.setPadding(Ui.dp(act, 2), 0, 0, 0);
-        box.addView(n);
-        return n;
-    }
-
-    /** The running game's title ID (GameActivity's intent): the panel's settings are that game's own */
+    /** The running game's title ID (GameActivity's intent): the menu's settings are that game's own */
     private String game() { return String.valueOf(act.getIntent().getStringExtra("title_id")); }
 
+    /** One menu row; keep[0] receives its subtitle so a dialog can refresh it when the state changes */
+    private void menuRow(int icon, String title, String sub, TextView[] keep, View.OnClickListener l) {
+        View r = Ui.panelRow(act, icon, title, sub, l);
+        keep[0] = (TextView) ((LinearLayout) ((LinearLayout) r).getChildAt(1)).getChildAt(1);   // the subtitle line: the column's second child (panelRow adds it only with a sub)
+        box.addView(r, rowGap());
+    }
+
+    private void setSub(TextView[] keep, CharSequence s) { if (keep[0] != null) keep[0].setText(s); }
+
+    private LinearLayout.LayoutParams rowGap() {
+        LinearLayout.LayoutParams lp = Ui.fill();
+        lp.topMargin = Ui.dp(act, 12);
+        return lp;
+    }
+
     private void build() {
-        // The panel's header: the NativeAYN mark over the game, its name, the running game's title, the same teal rule as the launcher's headers
+        // The menu's header: the NativeAYN mark, its name, the running game's name, the teal rule
         LinearLayout h = Ui.row(act);
         h.setMinimumHeight(Ui.dp(act, 52));
         h.addView(Ui.badge(act, 40));
@@ -128,80 +124,118 @@ final class SidePanel extends FrameLayout {
         rp.height = Ui.dp(act, 2);
         rp.topMargin = Ui.dp(act, 4);
         box.addView(rule, rp);
-        note("The game runs on behind this panel; every change applies now and is kept.");
 
-        head("Frame rate cap");   // the game's own frame rate; frame generation (below, its own heading) adds frames on top
-        int live = Integer.parseInt(Native.fpsCapStatus().split(" ")[0]);
-        int cur = live >= 0 ? live : Prefs.fpsCap(act, game());   // the cap in effect (env.txt or DM_CTL may have set another)
-        String[] capLabels = new String[Prefs.FPS_CAPS.length];
-        for (int i = 0; i < Prefs.FPS_CAPS.length; i++) capLabels[i] = Prefs.FPS_CAPS[i] == 0 ? "Auto" : Prefs.FPS_CAPS[i] + "";
+        String[] f = Native.fpsCapStatus().split(" ");   // the cap in effect, the rates this build has, and what the game runs at now
+        int cap = Integer.parseInt(f[0]), now = Integer.parseInt(f[2]);
+        menuRow(R.drawable.ic_p_hourglass, "Frame rate cap", capNow(cap, now), capSub, v -> fpsDialog());
+        menuRow(R.drawable.ic_p_triforce, "Frame generation", Lsfg.on(act) ? "On" : "Off", genSub, v -> genDialog());
+        menuRow(R.drawable.ic_p_piece, "Upscaling", Fsr.on(act) ? "FSR 1 on" : "Off", upSub, v -> upDialog());
+        menuRow(R.drawable.ic_p_dpad, "On-screen controls", "Buttons, opacity, layout", ctlSub, v -> controlsDialog());
+        menuRow(R.drawable.ic_p_eye, "Overlay", Prefs.overlay(act) ? "Shown over the game" : "Hidden", ovlSub, v -> overlayDialog());
+        menuRow(R.drawable.ic_p_reticle, "Controller mapping", "The gamepad's buttons, per controller", padSub, v -> padDialog());
+        int sk = Native.skipStatus();   // the intro skip (DM_SKIP): offered where it is armed (Game settings › Intro skip) and in the test app
+        if (sk >= 0 && ((sk & 2) != 0 || GameActivity.testApp()))
+            menuRow(R.drawable.ic_p_ffwd, "Intro skip", (sk & 1) != 0 ? "Skipping the intro now" : "Off (hold \u2212 and + for 1 s in the game)", skipSub, v -> skipDialog());
+        menuRow(R.drawable.ic_p_pause, "Pause or stop", "Suspend the game, or end the session", gameSub, v -> gameDialog());
+    }
+
+    /** What the cap line says: the live status of the running game */
+    private String capNow(int cap, int now) {
+        if (cap < 0) return "This build has no frame rate cap";
+        if (now <= 0) return "Starting\u2026";
+        if (Integer.parseInt(Native.fpsCapStatus().split(" ")[1]) == 0) return "This game picks its own frame rate";   // rates == 0 and presenting: the game's own
+        return "Now " + now + " fps" + (cap > 0 ? ", capped at " + cap : ", the game's own");
+    }
+
+    // ---- The dialogs: one per row, the same rows the main screen's settings use ----
+
+    private void fpsDialog() {
+        LinearLayout b = dialogBox();
+        String[] f = Native.fpsCapStatus().split(" ");
+        int live = Integer.parseInt(f[0]), cur = live >= 0 ? live : Prefs.fpsCap(act, game());   // the cap in effect (env.txt or DM_CTL may have set another)
+        String[] labels = new String[Prefs.FPS_CAPS.length];
+        for (int i = 0; i < Prefs.FPS_CAPS.length; i++) labels[i] = Prefs.FPS_CAPS[i] == 0 ? "Auto" : Prefs.FPS_CAPS[i] + "";
         int curIdx = -1;
-        for (int i = 0; i < Prefs.FPS_CAPS.length; i++) if (Prefs.FPS_CAPS[i] == cur) curIdx = i;   // a cap off the list (40, 45): none selected, the line below says it
+        for (int i = 0; i < Prefs.FPS_CAPS.length; i++) if (Prefs.FPS_CAPS[i] == cur) curIdx = i;
         if (cur < 0) curIdx = 0;   // no cap set: Auto (the game's own)
-        caps = Ui.pillGroup(act, capLabels, curIdx, (g, id) -> {
+        TextView st = Ui.small(act, capNow(live, Integer.parseInt(f[2])));
+        b.addView(Ui.body(act, "The cap from now on (Auto = the game's own rate)"));
+        LinearLayout.LayoutParams pgp = Ui.fill();
+        pgp.topMargin = Ui.dp(act, 8);
+        b.addView(Ui.pillGroup(act, labels, curIdx, (g, id) -> {
             int v = Prefs.FPS_CAPS[id - 1000];
             Prefs.fpsCap(act, game(), v);   // the running game's own cap from now on (the main screen's stays the default of the others)
             Native.fpsCapSet(v);
-            refresh();
-        });
-        box.addView(caps);
-        fpsNow = note("");
+            String[] s = Native.fpsCapStatus().split(" ");
+            st.setText(capNow(Integer.parseInt(s[0]), Integer.parseInt(s[2])));
+            setSub(capSub, st.getText());
+        }), pgp);
+        b.addView(st);
+        Ui.sheet(act, "Frame rate cap", b).setPositiveButton("Done", null).show();
+    }
 
-        lsfgNow = Lsfg.rows(act, box, "", () -> { Lsfg.push(act); refresh(); });
+    private void genDialog() {
+        LinearLayout b = dialogBox();
+        TextView st = Lsfg.rows(act, b, "Now: " + Native.frameGenStatus(), () -> Lsfg.push(act), false);
+        Ui.sheet(act, "Frame generation", b).setPositiveButton("Done", null)
+                .setOnDismissListener(d -> { setSub(genSub, Lsfg.on(act) ? "On" : "Off"); }).show();
+    }
 
-        Fsr.rows(act, box);
+    private void upDialog() {
+        LinearLayout b = dialogBox();
+        Fsr.rows(act, b, false);
+        Ui.sheet(act, "Upscaling", b).setPositiveButton("Done", null)
+                .setOnDismissListener(d -> { setSub(upSub, Fsr.on(act) ? "FSR 1 on" : "Off"); }).show();
+    }
 
-        head("Overlay");
-        Overlay.rows(act, box, null);
+    private void overlayDialog() {
+        LinearLayout b = dialogBox();
+        Overlay.rows(act, b, null);
+        Ui.sheet(act, "Overlay", b).setPositiveButton("Done", null)
+                .setOnDismissListener(d -> { setSub(ovlSub, Prefs.overlay(act) ? "Shown over the game" : "Hidden"); }).show();
+    }
 
-        head("On-screen controls");
-        fill.accept(box);   // GameActivity: TouchControls.controlRows
+    private void controlsDialog() {
+        LinearLayout b = dialogBox();
+        fill.accept(b);   // GameActivity: TouchControls.controlRows
+        Ui.sheet(act, "On-screen controls", b).setPositiveButton("Done", null).show();
+    }
 
-        head("Controller");   // the physical gamepad's buttons, per controller: rows that capture the next key, kept for the next start (ControllerControls)
-        ControllerControls.rows(act, box);
+    private void padDialog() {
+        LinearLayout b = dialogBox();
+        ControllerControls.rows(act, b);
+        Ui.sheet(act, "Controller mapping", b).setPositiveButton("Done", null).show();
+    }
 
-        int sk = Native.skipStatus();   // the intro skip (DM_SKIP): offered where it is armed (Game settings › Intro skip) and in the test app
-        if (sk >= 0 && ((sk & 2) != 0 || GameActivity.testApp())) {
-            head("Intro skip (debug)");
-            note("Presses A every few frames and ends movies early until gameplay, then stops by itself. In the game: hold − and + together for 1 s.");
-            box.addView(Ui.button(act, (sk & 1) != 0 ? "Stop the intro skip" : "Skip the intro now", Ui.Kind.TONAL,
-                    v -> { Native.skipSet((Native.skipStatus() & 1) != 0 ? 0 : 1); close(); }), Ui.fill());
-        }
+    private void skipDialog() {
+        LinearLayout b = dialogBox();
+        b.addView(Ui.small(act, "Presses A every few frames and ends movies early until gameplay, then stops by itself. In the game: hold \u2212 and + together for 1 s."));
+        b.addView(Ui.button(act, (Native.skipStatus() & 1) != 0 ? "Stop the intro skip" : "Skip the intro now", Ui.Kind.TONAL,
+                v -> { Native.skipSet((Native.skipStatus() & 1) != 0 ? 0 : 1); setSub(skipSub, (Native.skipStatus() & 1) != 0 ? "Skipping the intro now" : "Off (hold \u2212 and + for 1 s in the game)"); }), Ui.fill());
+        Ui.sheet(act, "Intro skip (debug)", b).setPositiveButton("Done", null).show();
+    }
 
-        Button pause = Ui.button(act, "Pause the game", Ui.Kind.TONAL,   // the game suspended (clock, graphics, threads, audio) until a tap on the screen, or A / Start: GameActivity.pause
-                v -> { close(); if (act instanceof GameActivity) ((GameActivity) act).pause(); });
-        LinearLayout.LayoutParams pl = Ui.fill();
-        pl.topMargin = Math.round(24 * getResources().getDisplayMetrics().density);
-        box.addView(pause, pl);
-        box.addView(Ui.toggle(act, "Pause when the game comes back from the background", Prefs.pauseOnReturn(act, game()),
-                (b, on) -> Prefs.pauseOnReturn(act, game(), on)));
-        box.addView(Ui.button(act, "Stop the game", Ui.Kind.DANGER, v -> new AlertDialog.Builder(act).setTitle("Stop the game?").setMessage("The game ends; unsaved progress is lost. The log stays for Share log.")
+    private AlertDialog sub;   // the open row's dialog (one at a time): a row that leaves the game (Pause) closes it too
+
+    private void gameDialog() {
+        LinearLayout b = dialogBox();
+        b.addView(Ui.button(act, "Pause the game", Ui.Kind.TONAL,   // the game suspended (clock, graphics, threads, audio) until a tap on the screen, or A / Start: GameActivity.pause
+                v -> { if (sub != null) sub.dismiss(); close(); if (act instanceof GameActivity) ((GameActivity) act).pause(); }), Ui.fill());
+        b.addView(Ui.toggle(act, "Pause when the game comes back from the background", Prefs.pauseOnReturn(act, game()),
+                (cb, on) -> Prefs.pauseOnReturn(act, game(), on)));
+        b.addView(Ui.button(act, "Stop the game", Ui.Kind.DANGER, v -> new AlertDialog.Builder(act).setTitle("Stop the game?").setMessage("The game ends; unsaved progress is lost. The log stays for Share log.")
                 .setPositiveButton("Stop", (d, w) -> { Native.note("stopped by the user"); if (act instanceof GameActivity) ((GameActivity) act).backToFrontend(); android.os.Process.killProcess(android.os.Process.myPid()); })
                 .setNegativeButton("Keep running", null).show()), Ui.fill());
-        box.addView(Ui.button(act, "Back to the game", Ui.Kind.PRIMARY, v -> close()), Ui.fill());
+        sub = Ui.sheet(act, "Pause or stop", b).setPositiveButton("Done", null).create();
+        sub.show();
     }
 
-    /** Twice a second while open: what the game runs at, which caps it can hold, and the frame generation's state */
-    private void refresh() {
-        if (!open) return;
-        String[] f = Native.fpsCapStatus().split(" ");
-        int cap = Integer.parseInt(f[0]), rates = Integer.parseInt(f[1]), now = Integer.parseInt(f[2]);
-        for (int i = 0; i < Prefs.FPS_CAPS.length; i++) {
-            int v = Prefs.FPS_CAPS[i], bit = v == 15 ? 0 : v == 20 ? 1 : v == 30 ? 2 : 5;   // the host's bits: 15, 20, 30, (40, 45,) 60
-            caps.getChildAt(i).setEnabled(v == 0 || cap >= 0 && (rates & 1 << bit) != 0);
-        }
-        // No cap in this build, or a game that picks its own frame rate: no choices (they would do nothing), one line instead
-        // (rates is 0 too until the game's main is loaded: only a game that presents, now > 0, is known to pick its own)
-        boolean own = cap >= 0 && rates == 0 && now > 0, none = cap < 0 || own;
-        caps.setVisibility(none ? GONE : VISIBLE);
-        if (cap >= 0 && now > 0) Prefs.ownRate(act, game(), own);   // its Game settings hide the cap too
-        String s = cap < 0 ? "This build has no frame rate cap."
-                : now <= 0 ? "Starting…"
-                : own ? "This game picks its own frame rate."
-                : "Now " + now + " fps" + (cap > 0 ? ", capped at " + cap : ", the game's own") + ".";
-        fpsNow.setText(s);
-        if (lsfgNow != null) { String st = Native.frameGenStatus(); int sp = st.indexOf(' '); lsfgNow.setText("Now: " + (sp > 0 ? st.substring(sp + 1) : st)); }
-        removeCallbacks(tick);   // a change calls refresh too: one loop, not one more per change
-        postDelayed(tick, 500);
+    /** The column a dialog's rows go into (the sheet scrolls it; its padding is the sheet's) */
+    private LinearLayout dialogBox() {
+        LinearLayout b = new LinearLayout(act);
+        b.setOrientation(LinearLayout.VERTICAL);
+        b.setPadding(Ui.dp(act, 4), 0, Ui.dp(act, 4), 0);
+        return b;
     }
 }
+

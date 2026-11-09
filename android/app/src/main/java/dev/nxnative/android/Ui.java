@@ -318,7 +318,10 @@ final class Ui {
      * A button: 48 dp high, 14 dp corners, one line (labels are kept short; the button grows to fit its label, and a half-width one ellipsizes rather than wraps).
      * PRIMARY banana yellow, TONAL the soft tint, SOFT an outline, DANGER red-orange on its tint, QUIET text only in the accent. Disabled ones fade
      */
-    static Button button(Context c, CharSequence s, Kind k, View.OnClickListener l) {
+    static Button button(Context c, CharSequence s, Kind k, View.OnClickListener l) { return button(c, s, k, 48, l); }
+
+    /** The same at a chosen height (44 dp in a long list: the controller's mapping rows) */
+    static Button button(Context c, CharSequence s, Kind k, int heightDp, View.OnClickListener l) {
         Button b = new Button(c) {
             @Override public void setEnabled(boolean on) { super.setEnabled(on); setAlpha(on ? 1f : 0.42f); }
         };
@@ -330,8 +333,8 @@ final class Ui {
         b.setStateListAnimator(null);
         b.setMinWidth(dp(c, 64));
         b.setMinimumWidth(dp(c, 64));
-        b.setMinHeight(dp(c, 48));
-        b.setMinimumHeight(dp(c, 48));
+        b.setMinHeight(dp(c, heightDp));
+        b.setMinimumHeight(dp(c, heightDp));
         int h = dp(c, k == Kind.QUIET ? 12 : 18);
         b.setPadding(h, 0, h, 0);
         b.setSingleLine(true);
@@ -440,6 +443,50 @@ final class Ui {
 
     // ---- In-game panel parts (SidePanel): the same design system over the running game ----
 
+    /** A menu row like a game's pause menu: an icon tile (the panel's own vector marks, Zelda-flavoured: hourglass, Triforce, Sheikah eye), a title over its current state, a chevron; the whole row is the touch target */
+    static View panelRow(Context c, int iconRes, CharSequence title, CharSequence sub, View.OnClickListener l) {
+        LinearLayout r = row(c);
+        r.setMinimumHeight(dp(c, 68));
+        r.setPadding(dp(c, 12), dp(c, 8), dp(c, 10), dp(c, 8));
+        r.setBackground(ripple(c, round(col(c, R.color.bn_card), dp(c, 14), col(c, R.color.bn_card_stroke), dp(c, 1))));
+        r.setClickable(true);
+        r.setFocusable(true);
+        r.setOnClickListener(l);
+        r.setAccessibilityDelegate(new View.AccessibilityDelegate() {
+            @Override public void onInitializeAccessibilityNodeInfo(View host, android.view.accessibility.AccessibilityNodeInfo info) {
+                super.onInitializeAccessibilityNodeInfo(host, info);
+                info.setClassName(Button.class.getName());
+            }
+        });
+        ImageView tile = new ImageView(c);
+        tile.setImageResource(iconRes);
+        tile.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        tile.setColorFilter(col(c, R.color.bn_accent));   // the panel's teal, the same accent as everything else here
+        tile.setPadding(dp(c, 12), dp(c, 12), dp(c, 12), dp(c, 12));
+        tile.setBackground(round(0xFF0A1424, dp(c, 12), 0, 0));
+        tile.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        r.addView(tile, new LinearLayout.LayoutParams(dp(c, 46), dp(c, 46)));
+        LinearLayout col = new LinearLayout(c);
+        col.setOrientation(LinearLayout.VERTICAL);
+        col.setPadding(dp(c, 14), 0, dp(c, 8), 0);
+        TextView t = text(c, title, 16, R.color.bn_text, 700);
+        t.setSingleLine(true);
+        t.setEllipsize(TextUtils.TruncateAt.END);
+        col.addView(t);
+        if (sub != null) {
+            TextView s = small(c, sub);
+            s.setSingleLine(true);
+            s.setEllipsize(TextUtils.TruncateAt.END);
+            col.addView(s);
+        }
+        r.addView(col, weight());
+        ImageView ch = new ImageView(c);
+        ch.setImageDrawable(icon(c, R.drawable.ic_chevron, R.color.bn_text_2));
+        ch.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        r.addView(ch, new LinearLayout.LayoutParams(dp(c, 20), dp(c, 20)));
+        return r;
+    }
+
     /** A setting's tick row: a CheckBox in the teal accent, body-size text (the in-game panel, a settings sheet) */
     static CheckBox toggle(Context c, CharSequence label, boolean on, android.widget.CompoundButton.OnCheckedChangeListener l) {
         CheckBox b = new CheckBox(c);
@@ -447,7 +494,8 @@ final class Ui {
         b.setTextSize(15);
         b.setTypeface(face(500));
         b.setTextColor(col(c, R.color.bn_text));
-        b.setPadding(dp(c, 2), dp(c, 7), dp(c, 2), dp(c, 7));
+        b.setMinHeight(dp(c, 30));
+        b.setPadding(dp(c, 2), dp(c, 3), dp(c, 2), dp(c, 3));
         b.setChecked(on);
         b.setOnCheckedChangeListener(l);
         return b;
@@ -466,8 +514,8 @@ final class Ui {
             b.setTextSize(13);
             b.setTypeface(face(600));
             b.setSingleLine(true);
-            b.setMinHeight(dp(c, 38));
-            b.setPadding(dp(c, 16), 0, dp(c, 16), 0);
+            b.setMinHeight(dp(c, 36));
+            b.setPadding(dp(c, 14), 0, dp(c, 14), 0);
             b.setGravity(Gravity.CENTER);
             b.setStateListAnimator(null);
             b.setTextColor(new ColorStateList(new int[][]{{android.R.attr.state_checked}, {}},

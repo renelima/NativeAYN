@@ -37,11 +37,9 @@ final class Fsr {
         } catch (IOException e) { Native.note("[RED] FSR: the setting could not be sent to the game (" + e.getMessage() + "); it applies at the next start"); }
     }
 
-    /** The in-game panel's rows: on / off and the sharpness, each applied at once */
-    static void rows(Context c, LinearLayout box) {
-        TextView head = Ui.section(c, "Upscaling");
-        head.setPadding(head.getPaddingLeft(), Ui.dp(c, 20), 0, 0);
-        box.addView(head);
+    /** The in-game panel's rows: on / off and the sharpness, each applied at once. showHead adds the section label (the panel draws its own) */
+    static void rows(Context c, LinearLayout box, boolean showHead) {
+        if (showHead) box.addView(Ui.section(c, "Upscaling"));
         box.addView(Ui.toggle(c, "FSR 1 (sharper when the picture is scaled up to the screen)", on(c),
                 (b, v) -> { Prefs.of(c).edit().putBoolean("fsr", v).commit(); push(c); }));
         box.addView(Ui.body(c, "Sharpness"));
