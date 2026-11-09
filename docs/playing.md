@@ -1,49 +1,49 @@
-# Playing
+# Jogando
 
-How to build and install a game: [README](mac-and-iphone.md#how-to-play).
+Como compilar e instalar um jogo: [README](mac-and-iphone.md#como-jogar).
 
-- **Settings:** a screen before the game starts sets frame rate, resolution, docked or handheld mode, language, rumble and more. Tap **Play**; your choices are remembered. What each one does: [Settings](settings.md).
-- **Saves and logs** are in the Files app, under the game's name: `save/` and `log.txt` (the previous run is `log.prev.txt`). When something goes wrong, send `log.txt`.
-- **Reinstalling:** some sideloading tools give a reinstalled app a new data folder. Copy `save/` and `pso_user.tsv` over from the old one to keep your progress.
+- **Configurações:** uma tela antes do jogo começar define frame rate, resolução, modo docked ou portátil, idioma, rumble e mais. Toque em **Play**; suas escolhas são lembradas. O que cada uma faz: [Configurações](settings.md).
+- **Saves e logs** ficam no app Arquivos, sob o nome do jogo: `save/` e `log.txt` (a execução anterior é `log.prev.txt`). Quando algo dá errado, envie o `log.txt`.
+- **Reinstalação:** algumas ferramentas de sideloading dão a um app reinstalado uma nova pasta de dados. Copie `save/` e `pso_user.tsv` da pasta antiga para manter seu progresso.
 
-## Touch controls
+## Controles de toque
 
-Tap **2D** / **3D** at the top to switch layouts; the app remembers your choice. Wonder, Engage, Dread, 13 Sentinels, Link's Awakening, Ace Attorney Investigations Collection, Unicorn Overlord, Rhythm Heaven Groove, Octopath Traveler 0, Pokémon Legends: Z-A, Cuphead, Absolum, Blasphemous 2, Brain Memory Training Academy, The Great Ace Attorney Chronicles, STEINS;GATE RE:BOOT, Big Brain Academy: Brain vs. Brain, Patrick's Parabox, Celeste, Raging Loop and Mario vs. Donkey Kong start in 2D, the other games in 3D (STEINS;GATE RE:BOOT's quick save is R3, in the 3D layout).
+Toque em **2D** / **3D** no topo para trocar de layout; o app lembra sua escolha. Wonder, Engage, Dread, 13 Sentinels, Link's Awakening, Ace Attorney Investigations Collection, Unicorn Overlord, Rhythm Heaven Groove, Octopath Traveler 0, Pokémon Legends: Z-A, Cuphead, Absolum, Blasphemous 2, Brain Memory Training Academy, The Great Ace Attorney Chronicles, STEINS;GATE RE:BOOT, Big Brain Academy: Brain vs. Brain, Patrick's Parabox, Celeste, Raging Loop e Mario vs. Donkey Kong começam em 2D, os demais jogos em 3D (o quick save de STEINS;GATE RE:BOOT é R3, no layout 3D).
 
-In 3D, the right stick (the camera in most games) is not drawn: swipe on the right third of the screen, starting anywhere off the buttons. In Super Mario Galaxy and Super Mario Galaxy 2, other touches outside the controls move the pointer; in Captain Toad: Treasure Tracker they touch the game's screen (touch blocks, stun enemies), and in Big Brain Academy: Brain vs. Brain too (its menus and activities).
+No 3D, o analógico direito (a câmera na maioria dos jogos) não é desenhado: deslize no terço direito da tela, começando em qualquer ponto fora dos botões. Em Super Mario Galaxy e Super Mario Galaxy 2, outros toques fora dos controles movem o ponteiro; em Captain Toad: Treasure Tracker eles tocam a tela do jogo (blocos de toque, atordoar inimigos), e em Big Brain Academy: Brain vs. Brain também (seus menus e atividades).
 
-A connected game controller hides the touch controls and keeps every button.
+Um controle conectado esconde os controles de toque e mantém todos os botões.
 
 ## Rumble
 
-Game vibration uses the iPhone's haptic engine or a compatible connected controller. Controllers with separate left/right haptic outputs keep those effects separate. The settings screen's **Game rumble** and **Rumble strength** control it independently of **Touch feedback**. Phone rumble approximates the Switch's effects; physical feel and controller compatibility still need device testing.
+A vibração do jogo usa o motor háptico do iPhone ou um controle conectado compatível. Controles com saídas hápticas separadas para esquerda e direita mantêm esses efeitos separados. **Game rumble** e **Rumble strength** na tela de configurações controlam isso de forma independente de **Touch feedback**. O rumble do telefone aproxima os efeitos do Switch; a sensação física e a compatibilidade de controles ainda exigem testes em dispositivos.
 
-## Motion (gyro)
+## Movimento (giroscópio)
 
-A controller that supplies gyro data through Apple's controller support (DualSense, DualShock 4) drives the game's motion controls, on the Mac and the iPhone: aiming and tilt puzzles in games that read the controller's motion, such as Breath of the Wild with its Motion Controls option on. A controller without one (Backbone One, Razer Kishi and other controllers the phone mounts in) uses the iPhone's own gyro, as a Switch in handheld. Motion follows the controller in docked mode, the default.
+Um controle que fornece dados de giroscópio pelo suporte a controles da Apple (DualSense, DualShock 4) aciona os controles de movimento do jogo, no Mac e no iPhone: mira e puzzles de inclinação em jogos que leem o movimento do controle, como Breath of the Wild com a opção Motion Controls ativada. Um controle sem giroscópio (Backbone One, Razer Kishi e outros controles nos quais o telefone se encaixa) usa o giroscópio do próprio iPhone, como um Switch no modo portátil. O movimento segue o controle no modo docked, o padrão.
 
-`DM_PHONE_MOTION=0` in `Documents/env.txt` stops the phone's gyro, `DM_MOTION=0` all motion. If motion misbehaves, pack with `--no-motion` (`MOTION = False` in Spyder) for an app without it; `DM_MOTION=1` in `Documents/env.txt` turns it back on.
+`DM_PHONE_MOTION=0` em `Documents/env.txt` desliga o giroscópio do telefone; `DM_MOTION=0` desliga todo o movimento. Se o movimento se comportar mal, faça o pack com `--no-motion` (`MOTION = False` no Spyder) para gerar um app sem ele; `DM_MOTION=1` em `Documents/env.txt` o religa.
 
-Switch Pro Controller gyro on the Mac still needs the HID support being developed in [PR #296](https://github.com/seedds/nxnative/pull/296).
+O giroscópio do Switch Pro Controller no Mac ainda depende do suporte HID em desenvolvimento no [PR #296](https://github.com/seedds/nxnative/pull/296).
 
-**Shaking.** Shake the iPhone to shake the controller, in games that read its motion: Super Mario Odyssey's motion moves (such as the cap throw on a shake) need it, and Odyssey only takes them in its default docked mode. A light bump does not count; a sharp flick of the phone does.
+**Sacudir.** Sacuda o iPhone para sacudir o controle, nos jogos que leem o movimento dele: os movimentos de motion de Super Mario Odyssey (como o arremesso do chapéu com um sacudir) precisam disso, e Odyssey só os aceita em seu modo docked padrão. Uma pancada leve não conta; um giro seco do telefone conta.
 
-## Game language
+## Idioma do jogo
 
-English by default. Pick another when packing with `--language` (`-l`), by code or by name: `-l ja`, `-l zh-Hans`, `-l French` (`LANGUAGE` in Spyder). It must be one the game has; the script prints the game's languages and stops on one it lacks. To change it without rebuilding, pick another on the settings screen.
+Inglês por padrão. Escolha outro ao fazer o pack com `--language` (`-l`), por código ou por nome: `-l ja`, `-l zh-Hans`, `-l French` (`LANGUAGE` no Spyder). Precisa ser um idioma que o jogo tenha; o script imprime os idiomas do jogo e para em um que ele não tem. Para mudar sem reconstruir, escolha outro na tela de configurações.
 
-## Settings in a file
+## Configurações em arquivo
 
-Lines like `DM_OPMODE=0` (handheld mode: lower resolution, higher frame rate) in `Documents/env.txt` win over the settings screen, which then shows them greyed out ([the full list](settings.md#settings-in-a-file)). `DM_FPS_TARGET=30` keeps Breath of the Wild, Tears of the Kingdom, Octopath Traveler 0 and Octopath Traveler II at their original 30 fps, which saves battery; `DM_PRESENT_INTERVAL=game` does the same for Monster Train 2. `DM_SHOW_FPS=1` shows the frame rate at the top left (`--show-fps` when packing turns it on from the start). `DM_LAUNCHER=0` skips the settings screen.
+Linhas como `DM_OPMODE=0` (modo portátil: resolução menor, frame rate maior) em `Documents/env.txt` vencem a tela de configurações, que então as mostra acinzentadas ([a lista completa](settings.md#configuracoes-em-arquivo)). `DM_FPS_TARGET=30` mantém Breath of the Wild, Tears of the Kingdom, Octopath Traveler 0 e Octopath Traveler II nos seus 30 fps originais, o que economiza bateria; `DM_PRESENT_INTERVAL=game` faz o mesmo para Monster Train 2. `DM_SHOW_FPS=1` mostra o frame rate no canto superior esquerdo (`--show-fps` ao fazer o pack o liga desde o início). `DM_LAUNCHER=0` pula a tela de configurações.
 
-## On the Mac
+## No Mac
 
-A Mac app shows the game's settings in a window before the game starts ([The Mac settings window](settings.md#the-mac-settings-window)). Its `env.txt` is `~/Library/Application Support/nxnative/<title ID>/env.txt`, and its log is `~/Library/Logs/nxnative/<title ID>.log`. [NX2Apple](https://github.com/LNPANDY/NX2Apple)'s library can also start it with the settings you pick there.
+Um app para Mac mostra as configurações do jogo em uma janela antes do jogo começar ([A janela de configurações no Mac](settings.md#a-janela-de-configuracoes-no-mac)). Seu `env.txt` fica em `~/Library/Application Support/nxnative/<title ID>/env.txt`, e seu log em `~/Library/Logs/nxnative/<title ID>.log`. A biblioteca do [NX2Apple](https://github.com/LNPANDY/NX2Apple) também pode iniciá-lo com as configurações que você escolher lá.
 
-A controller macOS pairs but Apple's controller support does not list, such as an 8BitDo in its own mode (Ultimate 2C Wireless over Bluetooth), is read as a raw HID gamepad, with full analog sticks: it takes a player as any other controller does, and the log says `controller '<name>' (HID) connected`. Its buttons follow 8BitDo's numbering by default; another maker's pad may number them differently, and the log then says so. `DM_HID_MAP=A=1,B=2,X=4,Y=5` in `env.txt` moves them (here: the printed letters instead of the positions), `DM_HID_LOG=1` logs the number of each button pressed, and `DM_HID_PADS=0` turns this off.
+Um controle que o macOS pareia mas o suporte a controles da Apple não lista, como um 8BitDo em seu modo próprio (Ultimate 2C Wireless via Bluetooth), é lido como um gamepad HID bruto, com analógicos completos: ele ocupa um player como qualquer outro controle, e o log diz `controller '<name>' (HID) connected`. Seus botões seguem a numeração da 8BitDo por padrão; o pad de outro fabricante pode numerá-los de outro modo, e o log diz isso quando acontece. `DM_HID_MAP=A=1,B=2,X=4,Y=5` em `env.txt` os remapeia (aqui: as letras impressas em vez das posições), `DM_HID_LOG=1` registra o número de cada botão pressionado, e `DM_HID_PADS=0` desativa isso.
 
-The mouse pointer hides when you press a key or a controller button, or move a stick, while it is over the game picture. Moving the mouse shows it again, as does switching to another window or app.
+O ponteiro do mouse se esconde quando você pressiona uma tecla ou um botão do controle, ou move um analógico, enquanto ele está sobre a imagem do jogo. Mover o mouse o mostra de novo, assim como trocar para outra janela ou app.
 
-## Shaders on first sight
+## Shaders na primeira aparição
 
-Short stutters the first time a new scene appears are normal: the app compiles graphics for it once and remembers them for the next launch. What it remembered, and what the game's list names, is built before the game starts, behind "Preparing shaders" and a progress bar when that takes more than half a second.
+Pequenas travadas na primeira vez que uma cena nova aparece são normais: o app compila os gráficos dela uma vez e os lembra para o próximo início. O que ele lembra, e o que a lista do jogo nomeia, é construído antes do jogo começar, atrás de "Preparing shaders" e de uma barra de progresso quando isso leva mais de meio segundo.

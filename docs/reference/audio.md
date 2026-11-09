@@ -1,344 +1,344 @@
-# Audio
+# Áudio
 
-The audio renderer (`dm/host/hle_audren.c`), AudioOut, audio devices and codecs. Each entry: symptom, cause, fix, the games it was found on. The [symptom index](../agents/symptoms.md) lists every symptom.
+O renderizador de áudio (`dm/host/hle_audren.c`), AudioOut, dispositivos de áudio e codecs. Cada entrada: sintoma, causa, correção, os jogos em que foi encontrada. O [índice de sintomas](../agents/symptoms.md) lista todos os sintomas.
 
-## Audio renderer
+## Renderizador de áudio
 
-### Running the SDK's own renderer on the CPU
+### Rodando o renderizador da própria SDK na CPU
 
-Check whether the SDK carries the renderer: list the `sdk` module's exports for `nn::audio::server::` and `nn::audio::dsp::CommandListProcessor`. If they are there (Super Mario Bros. Wonder, SDK 16), do not write a mixer:
+Confira se a SDK traz o renderizador: liste as exports do módulo `sdk` para `nn::audio::server::` e `nn::audio::dsp::CommandListProcessor`. Se estiverem lá (Super Mario Bros. Wonder, SDK 16), não escreva um mixer:
 
-- switch a copy of `AudioRendererParameter` to rendering device = CPU (+0x2c = 1) and execution mode = manual (+0x30 = 1) in `GetAudioRendererWorkBufferSize` and both `OpenAudioRenderer` overloads;
-- call the SDK originals (`guest_sym` returns the module's own code even for a forced symbol);
-- drive `ExecuteAudioRendererRendering` from a guest thread (`dm_guest_thread_spawn`).
+- troque uma cópia de `AudioRendererParameter` para rendering device = CPU (+0x2c = 1) e execution mode = manual (+0x30 = 1) em `GetAudioRendererWorkBufferSize` e em ambas as overloads de `OpenAudioRenderer`;
+- chame os originais da SDK (`guest_sym` devolve o código do próprio módulo mesmo para um símbolo forçado);
+- conduza `ExecuteAudioRendererRendering` a partir de uma thread do convidado (`dm_guest_thread_spawn`).
 
-The open then goes through `CreateAudioRendererManagerByDfc`; no IPC.
-For a replaced DSP renderer the size query keeps the service's work-buffer contract; a larger local CPU representation is a backend cost. See [A sound engine's heap too small for its renderer and players](#a-sound-engines-heap-too-small-for-its-renderer-and-players).
+A abertura então passa por `CreateAudioRendererManagerByDfc`; sem IPC.
+Para um renderizador DSP substituído, a consulta de tamanho mantém o contrato de work buffer do serviço; uma representação local de CPU maior é um custo do backend. Veja [O heap de um sound engine pequeno demais para seu renderizador e players](#o-heap-de-um-sound-engine-pequeno-demais-para-seu-renderizador-e-players).
 
-### SDK 8's longer `AudioRendererParameter`
+### O `AudioRendererParameter` mais longo da SDK 8
 
-- **Symptom:** abort with Result 0x499 in `audio::GetAudioRendererWorkBufferSize`.
-- **Cause:** SDK 8's `AudioRendererParameter` is one word longer than SDK 16's: its revision sits at +0x38. The host copies the game's parameter before switching it to CPU rendering with manual execution, and copied only 0x38 bytes, so `CheckValidRevision` read garbage.
-- **Fix:** it copies 0x40 now.
-- **Found on:** The Legend of Zelda: Link's Awakening (SDK 8.2.0).
+- **Sintoma:** abort com Result 0x499 em `audio::GetAudioRendererWorkBufferSize`.
+- **Causa:** o `AudioRendererParameter` da SDK 8 é uma palavra mais longo que o da SDK 16: sua revisão fica em +0x38. O host copia o parâmetro do jogo antes de trocá-lo para renderização na CPU com execução manual, e copiava só 0x38 bytes, então `CheckValidRevision` lia lixo.
+- **Correção:** agora copia 0x40.
+- **Encontrado em:** The Legend of Zelda: Link's Awakening (SDK 8.2.0).
 
-### A renderer opened without an event
+### Um renderizador aberto sem evento
 
-- **Symptom:** the game is silent; only the game's updates render (catch-up frames that nothing plays). The log has `audren: OpenAudioRenderer (no event)` and no `render thread started`.
-- **Cause:** the game opens the renderer with `OpenAudioRenderer(handle, parameter, work, size)`, the form with no system event, and paces its own updates, but the renderer must still run every 5 ms. The host used to start its render thread only for the form with an event.
-- **Fix:** both forms go through one open that starts the thread (`hle_audren.c` `ar_open`).
-- **Found on:** Balatro (SDK 18.3.2, LÖVE's OpenAL Soft; one boot).
+- **Sintoma:** o jogo fica mudo; só os updates do jogo renderizam (catch-up frames que nada reproduz). O log tem `audren: OpenAudioRenderer (no event)` e nenhum `render thread started`.
+- **Causa:** o jogo abre o renderizador com `OpenAudioRenderer(handle, parameter, work, size)`, a forma sem evento de sistema, e cadencia seus próprios updates, mas o renderizador ainda deve rodar a cada 5 ms. O host costumava iniciar sua render thread só para a forma com um evento.
+- **Correção:** as duas formas passam por uma única abertura que inicia a thread (`hle_audren.c` `ar_open`).
+- **Encontrado em:** Balatro (SDK 18.3.2, OpenAL Soft do LÖVE; um boot).
 
-### The SDK's open with an event calls the open without one (`t_in_open`)
+### A abertura da SDK com evento chama a abertura sem evento (`t_in_open`)
 
-- **Symptom:** `[RED] audren: a second renderer` right after the first open, with the same work buffer and "original device 1 mode 1".
-- **Cause:** not a second renderer: SDK 17.5.3's `OpenAudioRenderer` with an event opens it by calling the form without one through the PLT (`sdk+0x1e489c`), which the loader binds to the host's hook since that form has one ([A renderer opened without an event](#a-renderer-opened-without-an-event)), so `ar_open` ran twice for one renderer. The inner call started the render thread before the outer one had created the event, and the outer call took the renderer for a second one.
-- **Fix:** a thread-local flag (`t_in_open`) hands the inner call straight to the SDK with the host's CPU / manual copy of the parameter, and only the outer call starts the thread (`hle_audren.c`).
-- **Found on:** ROMANCE OF THE THREE KINGDOMS 8 REMAKE (SDK 17.5.3).
+- **Sintoma:** `[RED] audren: a second renderer` logo depois da primeira abertura, com o mesmo work buffer e "original device 1 mode 1".
+- **Causa:** não é um segundo renderizador: o `OpenAudioRenderer` com evento da SDK 17.5.3 abre o renderizador chamando a forma sem um através do PLT (`sdk+0x1e489c`), que o loader vincula ao hook do host já que aquela forma tem um ([Um renderizador aberto sem evento](#um-renderizador-aberto-sem-evento)), então `ar_open` rodou duas vezes para um só renderizador. A chamada interna iniciou a render thread antes de a externa ter criado o evento, e a chamada externa tomou o renderizador como um segundo.
+- **Correção:** uma flag thread-local (`t_in_open`) entrega a chamada interna direto à SDK com a cópia CPU / manual do parâmetro feita pelo host, e só a chamada externa inicia a thread (`hle_audren.c`).
+- **Encontrado em:** ROMANCE OF THE THREE KINGDOMS 8 REMAKE (SDK 17.5.3).
 
-### The renderer event as the service gives it: a kernel event
+### O evento do renderizador como o serviço o dá: um evento de kernel
 
-- **Symptom:** the frame loop stops for good as a level loads while audio keeps rendering. The main thread waits in `os::WaitSystemEvent` under `CAudioMemoryPool::Shutdown`, and a sound thread of higher priority waits on the same condition variable.
-- **Cause:** with the DSP service (device 0, what the game asks for) `OpenAudioRenderer` attaches the service's renderer event, a kernel readable event (`AttachReadableHandleToSystemEvent`, auto-clear). With CPU rendering and manual execution, which the host switches to ([Running the SDK's own renderer on the CPU](#running-the-sdks-own-renderer-on-the-cpu)), it creates a local one instead (`CreateSystemEvent(event, AutoClear, false)`, SDK 4: `sdk+0x190b6c`). Signalling a local auto-clear event wakes one waiter, the one of highest priority. A kernel event wakes every waiter, and each one tries `ResetSignal`. Donkey Kong Country: Tropical Freeze waits on the event from two threads: its sound thread (priority 29, `main+0x971e8`) every frame, and the main thread while it detaches an audio memory pool (`main+0x6fa8c`: `RequestDetachMemoryPool`, then wait and update until `IsMemoryPoolAttached` is false). The sound thread took every wake, and the main thread never woke again.
-- **Fix:** when the game opened the renderer for the service, the host replaces the SDK's local event with an inter-process auto-clear one (`DestroySystemEvent`, then `hle_bind_system_event(event, 1)` in `ar_open`), and the game's event waits on a copy of its read end. That event is the renderer's own, not the game's ([The renderer event belongs to the renderer, not the game](#the-renderer-event-belongs-to-the-renderer-not-the-game)). The SDK's renderer signals through `os::SignalSystemEvent`, which handles either kind. A game that opens a CPU renderer itself keeps the SDK's local event.
-- **Found on:** Donkey Kong Country: Tropical Freeze (SDK 4.4.0): the first level's load after the intro cinematic.
+- **Sintoma:** o loop de frames para de vez enquanto um nível carrega e o áudio continua renderizando. A thread main espera em `os::WaitSystemEvent` sob `CAudioMemoryPool::Shutdown`, e um thread de som de prioridade mais alta espera na mesma variável de condição.
+- **Causa:** com o serviço DSP (device 0, o que o jogo pede) `OpenAudioRenderer` anexa o evento do renderizador do serviço, um evento readable de kernel (`AttachReadableHandleToSystemEvent`, auto-clear). Com renderização na CPU e execução manual, para o que o host troca ([Rodando o renderizador da própria SDK na CPU](#rodando-o-renderizador-da-propria-sdk-na-cpu)), ele cria um local em vez disso (`CreateSystemEvent(event, AutoClear, false)`, SDK 4: `sdk+0x190b6c`). Sinalizar um evento auto-clear local acorda um waiters, o de prioridade mais alta. Um evento de kernel acorda todos os waiters, e cada um tenta `ResetSignal`. Donkey Kong Country: Tropical Freeze espera no evento de duas threads: seu thread de som (prioridade 29, `main+0x971e8`) a cada frame, e a thread main enquanto desanexa um pool de memória de áudio (`main+0x6fa8c`: `RequestDetachMemoryPool`, depois espera e atualiza até `IsMemoryPoolAttached` ser false). O thread de som pegava todas as wakes, e a thread main nunca mais acordava.
+- **Correção:** quando o jogo abriu o renderizador para o serviço, o host substitui o evento local da SDK por um auto-clear interprocess (`DestroySystemEvent`, depois `hle_bind_system_event(event, 1)` em `ar_open`), e o evento do jogo espera numa cópia de sua ponta de leitura. Aquele evento é o do próprio renderizador, não o do jogo ([O evento do renderizador pertence ao renderizador, não ao jogo](#o-evento-do-renderizador-pertence-ao-renderizador-nao-ao-jogo)). O renderizador da SDK sinaliza através de `os::SignalSystemEvent`, que aceita qualquer tipo. Um jogo que abre ele mesmo um renderizador de CPU mantém o evento local da SDK.
+- **Encontrado em:** Donkey Kong Country: Tropical Freeze (SDK 4.4.0): o carregamento do primeiro nível depois da cinematográfica de introdução.
 
-### The renderer event belongs to the renderer, not the game
+### O evento do renderizador pertence ao renderizador, não ao jogo
 
-- **Symptom:** the game exits with 42 on its first rendered audio frame: `Break#1 reason=0` in `os::SignalSystemEvent`, called from the public `ExecuteAudioRendererRendering` on the host's render thread (`render_main`).
-- **Cause:** with the DSP service (what the game asks for), no SDK's `OpenAudioRenderer` keeps a pointer to the game's `SystemEventType`. It stores NULL in the handle's event slot and attaches the service's readable handle to the object, so the game may destroy the object or reuse its memory once the open returns. The slot is `handle[1]` in SDKs 3, 5 and 12 (SDK 3 `sdk+0x17e004`, SDK 12 `sdk+0x4d2b4`) and `*handle[1]` in SDK 18. The CPU / manual open the host switches to ([Running the SDK's own renderer on the CPU](#running-the-sdks-own-renderer-on-the-cpu)) stores the object in that slot instead (SDK 3 `sdk+0x17dffc`, SDK 12 `sdk+0x4d274`), and `ExecuteAudioRendererRendering` signals it after every render. LEGO Star Wars: The Skywalker Saga passes an event on its stack, and Little Nightmares reuses the object's memory. The first render found a state byte (+0x28) that was no longer the event's, and the SDK aborted.
-- **Fix:** `ar_open` gives the SDK's open an event of the renderer's own (`g_rev` in `hle_audren.c`, alive until `CloseAudioRenderer`, which destroys it), whatever slot the SDK keeps it in. The game's object gets a copy of that kernel event's read end (`hle_dup_readable_handle`), attached as managed and auto-clear, as the service's copied handle is. The renderer never touches the game's object again. The host's binding no longer sits at the game's address either, where a later service event at the same storage would have found it (`hle_bind_system_event` returns early for an address it already holds). Tests: `t_audren_work` (the game's event is overwritten after the open, including the SDK 3 to 12 slot) and `t_system_event` (the copied read end).
-- **Found on:** LEGO Star Wars: The Skywalker Saga (`010042D00D900000`, 1.10.0, SDK 12.3.6; issue #632), Little Nightmares (`01002FC00412C000`, 1.0.4, SDK 3.5.1; PR #804), both from provisional profiles. DRAGON BALL FighterZ (`0100A250097F0000`, SDK 4.5.0; issue #771) aborts at the same place, and SDK 5.4's open and `ExecuteAudioRendererRendering` are the same code as SDK 3's and 12's. None of the three is here: the fix awaits their reporters' runs.
+- **Sintoma:** o jogo sai com 42 em seu primeiro frame de áudio renderizado: `Break#1 reason=0` em `os::SignalSystemEvent`, chamado a partir do público `ExecuteAudioRendererRendering` na render thread do host (`render_main`).
+- **Causa:** com o serviço DSP (o que o jogo pede), nenhum `OpenAudioRenderer` de SDK mantém um ponteiro para o `SystemEventType` do jogo. Ele guarda NULL no slot de evento do handle e anexa ao objeto o handle readable do serviço, então o jogo pode destruir o objeto ou reutilizar sua memória assim que a abertura retorna. O slot é `handle[1]` nas SDKs 3, 5 e 12 (SDK 3 `sdk+0x17e004`, SDK 12 `sdk+0x4d2b4`) e `*handle[1]` na 18. A abertura CPU / manual para a qual o host troca ([Rodando o renderizador da própria SDK na CPU](#rodando-o-renderizador-da-propria-sdk-na-cpu)) guarda o objeto naquele slot em vez disso (SDK 3 `sdk+0x17dffc`, SDK 12 `sdk+0x4d274`), e `ExecuteAudioRendererRendering` o sinaliza depois de cada render. LEGO Star Wars: The Skywalker Saga passa um evento em sua pilha, e Little Nightmares reutiliza a memória do objeto. O primeiro render achou um byte de estado (+0x28) que já não era o do evento, e a SDK abortou.
+- **Correção:** `ar_open` dá à abertura da SDK um evento do próprio renderizador (`g_rev` em `hle_audren.c`, vivo até `CloseAudioRenderer`, que o destrói), seja qual for o slot em que a SDK o guarde. O objeto do jogo ganha uma cópia da ponta de leitura daquele evento de kernel (`hle_dup_readable_handle`), anexada como gerenciada e auto-clear, como é o handle copiado do serviço. O renderizador nunca mais toca no objeto do jogo. O binding do host também não fica mais no endereço do jogo, onde um evento de serviço posterior no mesmo armazenamento o teria encontrado (`hle_bind_system_event` retorna cedo para um endereço que já mantém). Testes: `t_audren_work` (o evento do jogo é sobrescrito depois da abertura, incluindo o slot das SDKs 3 a 12) e `t_system_event` (a ponta de leitura copiada).
+- **Encontrado em:** LEGO Star Wars: The Skywalker Saga (`010042D00D900000`, 1.10.0, SDK 12.3.6; issue #632), Little Nightmares (`01002FC00412C000`, 1.0.4, SDK 3.5.1; PR #804), ambos de profiles provisórios. DRAGON BALL FighterZ (`0100A250097F0000`, SDK 4.5.0; issue #771) aborta no mesmo lugar, e a abertura e o `ExecuteAudioRendererRendering` da SDK 5.4 são o mesmo código que os da SDK 3 e da 12. Nenhum dos três está aqui: a correção aguarda as execuções dos relatores.
 
-### The renderer's update lock (`update_lock`)
+### O lock de update do renderizador (`update_lock`)
 
-- **Symptom:** none of its own; command generation races the game's `Update` on SDKs whose lock is not at SDK 16's offset.
-- **Cause:** `AudioRenderSystem::Update` holds a mutex in `AudioRenderSystem`; `GenerateCommand` does not take it, so the host does (the auto-mode system thread does the same in `SendCommandToDsp`). Which mutex depends on the SDK: `nn::os::LockMutex(MutexType *)` at +0x1d0 in SDK 4.4 and at +0x1d8 in 6.4–8.2, `SdkMutexType::Lock` at +0x1d8 in 10.4–11.4, +0x1f0 in 13.3–16.2 and +0x1f8 in 17.5 (the `sdk` builds of 24 games on hand), inlined in 19 and 20 (+0x2d0, the Span layout: [SDK 20's `AudioRenderSystem` layout](#sdk-20s-audiorendersystem-layout)). The host took SDK 16's for every SDK before 20, which wrote a lock word into another field and excluded nothing.
-- **Fix:** `update_lock` in `hle_audren.c` reads it off the SDK's own `Update`: the register the prologue adds the offset to and moves into x0 before its first `bl`, whose PLT slot must hold `LockMutex` or `SdkMutexType::Lock`; anything else keeps SDK 16's.
-- **Found on:** Mario Kart 8 Deluxe (4.4), the first game it was plainly wrong for.
-- **Check:** checked with sound on Big Brain Academy: Brain vs. Brain (11.4, +0x1d8), DRAGON QUEST XI S (7.3, `MutexType` +0x1d8) and Super Mario Odyssey (7.3, which is silent for its first minute with either lock).
+- **Sintoma:** nenhum próprio; a geração de comandos corre com o `Update` do jogo em SDKs cujo lock não está no offset da SDK 16.
+- **Causa:** `AudioRenderSystem::Update` segura um mutex em `AudioRenderSystem`; `GenerateCommand` não o toma, então o host o toma (a thread de sistema do modo auto faz o mesmo em `SendCommandToDsp`). Qual mutex depende da SDK: `nn::os::LockMutex(MutexType *)` em +0x1d0 na SDK 4.4 e em +0x1d8 na 6.4–8.2, `SdkMutexType::Lock` em +0x1d8 na 10.4–11.4, +0x1f0 na 13.3–16.2 e +0x1f8 na 17.5 (os builds `sdk` de 24 jogos à mão), inlined na 19 e na 20 (+0x2d0, o layout Span: [O layout `AudioRenderSystem` da SDK 20](#o-layout-audiorendersystem-da-sdk-20)). O host tomava o da SDK 16 para toda SDK antes da 20, o que escrevia uma palavra de lock em outro campo e não excluía nada.
+- **Correção:** `update_lock` em `hle_audren.c` o lê do próprio `Update` da SDK: o registrador em que o prólogo soma o offset e move para x0 antes de seu primeiro `bl`, cujo slot do PLT deve conter `LockMutex` ou `SdkMutexType::Lock`; qualquer outra coisa mantém a da SDK 16.
+- **Encontrado em:** Mario Kart 8 Deluxe (4.4), o primeiro jogo em que estava francamente errado.
+- **Checagem:** conferido com som em Big Brain Academy: Brain vs. Brain (11.4, +0x1d8), DRAGON QUEST XI S (7.3, `MutexType` +0x1d8) e Super Mario Odyssey (7.3, que fica mudo no primeiro minuto com qualquer um dos locks).
 
-### No `SdkMutexType` in SDK 3
+### Sem `SdkMutexType` na SDK 3
 
-- **Symptom:** `FATAL audren: missing SDK symbol _ZN2nn2os12SdkMutexType4LockEv` right after the renderer's render thread starts.
-- **Cause:** the render path looked up `SdkMutexType::Lock` / `Unlock` before reading which lock the SDK's `Update` takes ([The renderer's update lock](#the-renderers-update-lock-update_lock)); SDK 3.5.1's `sdk` has no `SdkMutexType` and takes `nn::os::LockMutex` at +0x1f8.
-- **Fix:** `render_once` looks up the `SdkMutexType` functions only when `update_lock` does not find `LockMutex` (`hle_audren.c`).
-- **Found on:** OCTOPATH TRAVELER (SDK 3.5.1), the first SDK 3 game through the audio renderer (Bayonetta 2's 3.6.0 plays through `AudioOut`).
+- **Sintoma:** `FATAL audren: missing SDK symbol _ZN2nn2os12SdkMutexType4LockEv` logo depois que a render thread do renderizador inicia.
+- **Causa:** o caminho de render procurava `SdkMutexType::Lock` / `Unlock` antes de ler qual lock o `Update` da SDK toma ([O lock de update do renderizador](#o-lock-de-update-do-renderizador-update_lock)); o `sdk` da 3.5.1 não tem `SdkMutexType` e toma `nn::os::LockMutex` em +0x1f8.
+- **Correção:** `render_once` procura as funções `SdkMutexType` só quando `update_lock` não acha `LockMutex` (`hle_audren.c`).
+- **Encontrado em:** OCTOPATH TRAVELER (SDK 3.5.1), o primeiro jogo de SDK 3 pelo renderizador de áudio (Bayonetta 2, na 3.6.0, toca através de `AudioOut`).
 
-### Where the `AudioRenderSystem` sits in `AudioRendererImpl`
+### Onde o `AudioRenderSystem` fica em `AudioRendererImpl`
 
-- **Symptom:** the sound is choppy: about two of every three 5 ms blocks are silent (a `DM_AUDIO_DUMP`), with no underruns. The log's `catch-up renders so far` grows by one for each rendered frame (2000 of every 2000), and every update logs `no frame rendered before update N`.
-- **Cause:** the host's takeover of `AudioRendererImpl::ExecuteAudioRendererRendering` found the `AudioRenderSystem` at a fixed `+0x60`, where SDK 16 and 20 keep it. SDK 3.4 keeps it at `+0x50` (`add x19, x0, #0x50` in the prologue, `sdk+0x188a10`). With the wrong pointer, the execution mode and rendering device came from other fields, so each render on the 5 ms render thread failed with 0x40299 and played a silent block. Only the game's updates rendered: one catch-up frame each, at 60 Hz instead of 200.
-- **Fix:** `impl_sys_off` in `hle_audren.c` reads the offset from the SDK's own function: the first `add xd, x0, #imm` before the first branch. If it finds none, it keeps `+0x60`. Every other `sdk` build on hand (18 games, SDK 4.5 to 21) reads `+0x60`.
-- **Found on:** SteamWorld Dig and SteamWorld Dig 2 (both ship the same SDK 3.4.0 `sdk` build).
-- **Check:** after the fix, the log has `audren: AudioRenderSystem at +0x50 in AudioRendererImpl`, a few dozen catch-up renders per 2000 frames, and a dump with no silent blocks once the music starts.
+- **Sintoma:** o som fica picotado: cerca de dois de cada três blocos de 5 ms são silenciosos (um `DM_AUDIO_DUMP`), sem underruns. A linha `catch-up renders so far` do log cresce de um para cada frame renderizado (2000 de cada 2000), e todo update registra `no frame rendered before update N`.
+- **Causa:** a tomada de `AudioRendererImpl::ExecuteAudioRendererRendering` pelo host achava o `AudioRenderSystem` num `+0x60` fixo, onde as SDKs 16 e 20 o mantêm. A SDK 3.4 o mantém em `+0x50` (`add x19, x0, #0x50` no prólogo, `sdk+0x188a10`). Com o ponteiro errado, o modo de execução e o dispositivo de renderização vinham de outros campos, então cada render na render thread de 5 ms falhava com 0x40299 e tocava um bloco silencioso. Só os updates do jogo renderizavam: um catch-up frame cada, a 60 Hz em vez de 200.
+- **Correção:** `impl_sys_off` em `hle_audren.c` lê o offset da própria função da SDK: o primeiro `add xd, x0, #imm` antes da primeira branch. Se não achar nenhum, mantém `+0x60`. Todo outro build `sdk` à mão (18 jogos, SDKs 4.5 a 21) lê `+0x60`.
+- **Encontrado em:** SteamWorld Dig e SteamWorld Dig 2 (ambos trazem o mesmo build `sdk` da SDK 3.4.0).
+- **Checagem:** depois da correção, o log tem `audren: AudioRenderSystem at +0x50 in AudioRendererImpl`, algumas dezenas de catch-up renders por 2000 frames, e um dump sem blocos silenciosos quando a música começa.
 
-### The render thread's route through the public `ExecuteAudioRendererRendering` (SDK 20)
+### O caminho da render thread pelo público `ExecuteAudioRendererRendering` (SDK 20)
 
-- **Symptom:** `CommandListProcessor::Process` crashes now and then (SIGSEGV under `render_main`, once at 60 s and once at 134 s in the shrine); every `RequestUpdate` renders a catch-up frame.
-- **Cause:** the public `ExecuteAudioRendererRendering` (`sdk+0x221e90`) reaches `AudioRendererImpl::ExecuteAudioRendererRendering` (`sdk+0x22ca88`, `x0 += 0x60` and a jump through the PLT) through the vtable, so the host's takeover of the `Impl` function was never called. The SDK's own `AudioRenderSystem::ExecuteAudioRendererRendering` ran instead (no update lock), every `RequestUpdate` rendered a catch-up frame because the host's render counter never moved, and the two threads wrote the same command buffer.
-- **Fix:** the host also takes over `AudioRenderSystem::ExecuteAudioRendererRendering`, the PLT target (`hle_audren.c`); catch-ups fell from one per update to 3 per run.
-- **Found on:** The Legend of Zelda: Breath of the Wild (SDK 20).
-- **Note:** the same SDK's other `AudioRenderSystem` layout is in [SDK 20's `AudioRenderSystem` layout](#sdk-20s-audiorendersystem-layout).
+- **Sintoma:** `CommandListProcessor::Process` derruba de vez em quando (SIGSEGV sob `render_main`, uma vez aos 60 s e outra aos 134 s no santuário); todo `RequestUpdate` renderiza um catch-up frame.
+- **Causa:** o público `ExecuteAudioRendererRendering` (`sdk+0x221e90`) chega a `AudioRendererImpl::ExecuteAudioRendererRendering` (`sdk+0x22ca88`, `x0 += 0x60` e um jump pelo PLT) através da vtable, então a tomada da função `Impl` pelo host nunca era chamada. O `AudioRenderSystem::ExecuteAudioRendererRendering` da própria SDK rodava em vez disso (sem lock de update), todo `RequestUpdate` renderizava um catch-up frame porque o contador de render do host nunca se movia, e as duas threads escreviam no mesmo command buffer.
+- **Correção:** o host também toma `AudioRenderSystem::ExecuteAudioRendererRendering`, o alvo do PLT (`hle_audren.c`); os catch-ups caíram de um por update para 3 por execução.
+- **Encontrado em:** The Legend of Zelda: Breath of the Wild (SDK 20).
+- **Nota:** o outro layout de `AudioRenderSystem` da mesma SDK está em [O layout `AudioRenderSystem` da SDK 20](#o-layout-audiorendersystem-da-sdk-20).
 
-### A renderer below 48 kHz with no upsampler on the CPU
+### Um renderizador abaixo de 48 kHz sem upsampler na CPU
 
-- **Symptom:** SIGSEGV at address 0x18 in `UpsamplerManager::Allocate` on the render thread.
-- **Cause:** a DeviceSink below 48 kHz is upsampled by the SDK's upsampler, and `AudioRenderSystem::SetUpRenderResourceSet` allocates the `UpsamplerManager` only for the DSP (`sdk+0x21eb6c`: rate 0x7d00 and rendering device +0x48 == 0); with the host's CPU rendering the manager pointer (`AudioRenderSystem+0x150`, the render context's +0x20) is null.
-- **Fix:** the host answers `Allocate` on a null manager with no upsampler, so the generator skips the upsample command (`sdk+0x225b40`), and resamples the DeviceSink's stereo downmix 3:2 itself (a 16-tap windowed sinc in three phases, `up_3_2` in `hle_audren.c`), 240 samples per 5 ms frame for the 48 kHz output.
-- **Found on:** DRAGON QUEST VII Reimagined: rate 32000, 160 samples per frame, `GenerateSinkCommands` `sdk+0x225a80`.
-- **Note:** until then the output code assumed an upsampled buffer at 32 kHz that no game had produced.
+- **Sintoma:** SIGSEGV no endereço 0x18 em `UpsamplerManager::Allocate` na render thread.
+- **Causa:** um DeviceSink abaixo de 48 kHz é amostrado para cima pelo upsampler da SDK, e `AudioRenderSystem::SetUpRenderResourceSet` aloca o `UpsamplerManager` só para o DSP (`sdk+0x21eb6c`: taxa 0x7d00 e rendering device +0x48 == 0); com a renderização na CPU do host o ponteiro do manager (`AudioRenderSystem+0x150`, o +0x20 do contexto de render) é nulo.
+- **Correção:** o host responde `Allocate` sobre um manager nulo sem upsampler, então o generator pula o comando de upsample (`sdk+0x225b40`), e reamostra ele mesmo o downmix estéreo do DeviceSink 3:2 (um sinc janelado de 16 taps em três fases, `up_3_2` em `hle_audren.c`), 240 amostras por frame de 5 ms para a saída de 48 kHz.
+- **Encontrado em:** DRAGON QUEST VII Reimagined: taxa 32000, 160 amostras por frame, `GenerateSinkCommands` `sdk+0x225a80`.
+- **Nota:** até então o código de saída assumia um buffer com upsample a 32 kHz que nenhum jogo tinha produzido.
 
-### A sound engine's heap too small for its renderer and players
+### O heap de um sound engine pequeno demais para seu renderizador e players
 
-- **Symptom:** the main thread spins at start-up in a resource wait (a `YieldThread` loop, no crash), right after `OpenAudioRenderer`.
-- **Cause:** the DSP service and an application's local SDK server use different command/state representations. The host forwarded the local CPU server's work-buffer requirement as the guest's DSP-service requirement. Larger local command structures could then exhaust a fixed sound heap that fits the service's budget. Changing only the device / execution fields in the local sizing routine does not reveal this difference: it still sizes the same compiled structures. The game note records the comparison against Horizon's actual sizing code and the resulting allocation failure.
-- **Fix:** `ar_service_work_size` in `hle_audren.c` computes the Horizon service budget through renderer revision 15, with revision gates for graph/splitter storage, effect states, performance frames and command storage. A DSP caller receives that size. On open the host independently asks the SDK for its CPU/manual requirement and supplies a page-aligned, zeroed backend buffer if it exceeds the caller's capacity; a buffer below the declared service requirement is rejected. Both open forms share the allocation, including a nested no-event open. Failed opens free it; close joins the render thread, closes the SDK renderer, then frees it. Explicit CPU renderers keep their SDK contract. A sufficient caller buffer is reused; revisions beyond the verified service model retain the SDK size. No firmware is loaded or distributed at runtime, and no game's heap constants change.
-- **Found on:** Hyrule Warriors: Age of Calamity.
-- **Check:** `make -C dm/host/tests GAME=<id> audren-work` checks independently obtained Horizon sizing fixtures, both public parameter layouts, uninitialized padding, unsupported revisions, nested opens, undersized buffers, failure cleanup, caller-owned storage and close lifetime. The sizing implementation also matched 360 seeded parameter sets executed through Horizon's original machine code across REV1–REV15. The game note records the original-heap reproduction and audio check.
+- **Sintoma:** a thread main gira na inicialização numa espera de recurso (um loop `YieldThread`, sem crash), logo depois de `OpenAudioRenderer`.
+- **Causa:** o serviço DSP e o servidor local da SDK de uma aplicação usam representações de comando/estado diferentes. O host encaminhava o requisito de work buffer do servidor CPU local da SDK como o requisito do serviço DSP do convidado. Estruturas de comando locais maiores podiam então esgotar um heap de som fixo que cabe no orçamento do serviço. Mudar só os campos de dispositivo / execução na rotina de dimensionamento local não revela essa diferença: ela ainda dimensiona as mesmas estruturas compiladas. A nota do jogo registra a comparação contra o código de dimensionamento real do Horizon e a falha de alocação resultante.
+- **Correção:** `ar_service_work_size` em `hle_audren.c` calcula o orçamento do serviço Horizon até a revisão 15 do renderizador, com gates de revisão para armazenamento de graph/splitter, estados de efeito, frames de performance e armazenamento de comandos. Um chamador DSP recebe esse tamanho. Na abertura o host pergunta independentemente à SDK seu requisito CPU/manual e fornece um buffer de backend alinhado a página e zerado se ele excede a capacidade do chamador; um buffer abaixo do requisito de serviço declarado é recusado. Ambas as formas de abertura compartilham a alocação, incluindo uma abertura no-evento aninhada. Aberturas que falham a liberam; o close junta a render thread, fecha o renderizador da SDK e depois a libera. Renderizadores de CPU explícitos mantêm seu contrato de SDK. Um buffer suficiente do chamador é reusado; revisões além do modelo de serviço verificado mantêm o tamanho da SDK. Nenhum firmware é carregado ou distribuído em execução, e nenhuma constante de heap de jogo muda.
+- **Encontrado em:** Hyrule Warriors: Age of Calamity.
+- **Checagem:** `make -C dm/host/tests GAME=<id> audren-work` confere fixtures de dimensionamento do Horizon obtidas independentemente, ambos os layouts públicos de parâmetro, padding não inicializado, revisões não suportadas, aberturas aninhadas, buffers menores que o necessário, limpeza em falha, armazenamento de propriedade do chamador e tempo de vida do close. A implementação de dimensionamento também bateu com 360 conjuntos de parâmetro com seed executados pelo código de máquina original do Horizon nas REV1–REV15. A nota do jogo registra a reprodução com o heap original e a checagem de áudio.
 
-## Command lists by SDK
+## Listas de comandos por SDK
 
-### Incomplete startup lists must not select the command layout
+### Listas de partida incompletas não devem selecionar o layout de comandos
 
-- **Symptom:** no sound after boot; `audren: no DeviceSink (ID 0x13) in the command list` and a malformed-command error persist even when later command lists are valid.
-- **Cause:** the host's render thread can generate commands before the game's first `RequestUpdate`. Mario Kart 8 Deluxe's first list ended in a zeroed third command, so none of the supported header layouts could walk it. `capture` nevertheless latched the default layout and consumed the one-time sink scan. Later SDK 6 headers were read as SDK 8–20 headers, and SDK 4's DeviceSink was never found. Retrying only header detection still leaves the sink scan consumed.
-- **Fix:** select the header only when the whole list walks in a supported layout. Until then, return a silent frame before the sink scan; the first valid list can select both the header and its sink. `t_audren_layout` reproduces the failure and checks stereo PCM for SDK 4, 6, 16 and 21, with valid-first, empty and incomplete startup lists and SDK 21's short first list.
-- **Found on:** Mario Kart 8 Deluxe (SDK 4.4.0; [PR #331](https://github.com/seedds/nxnative/pull/331)).
+- **Sintoma:** nenhum som depois do boot; `audren: no DeviceSink (ID 0x13) in the command list` e um erro de comando malformado persistem mesmo quando as listas de comandos posteriores são válidas.
+- **Causa:** a render thread do host pode gerar comandos antes do primeiro `RequestUpdate` do jogo. A primeira lista de Mario Kart 8 Deluxe terminava num terceiro comando zerado, então nenhum dos layouts de cabeçalho suportados conseguia percorrê-la. `capture` ainda assim travava o layout padrão e consumia a varredura única de sink. Cabeçalhos de SDK 6 posteriores eram lidos como cabeçalhos de SDK 8–20, e o DeviceSink da SDK 4 nunca era achado. Repetir só a detecção de cabeçalho ainda deixa a varredura de sink consumida.
+- **Correção:** selecione o cabeçalho só quando a lista inteira é percorrida num layout suportado. Até lá, retorne um frame silencioso antes da varredura de sink; a primeira lista válida pode selecionar tanto o cabeçalho quanto seu sink. `t_audren_layout` reproduz a falha e confere PCM estéreo para as SDKs 4, 6, 16 e 21, com listas de partida válida primeiro, vazia e incompleta, e a primeira lista curta da SDK 21.
+- **Encontrado em:** Mario Kart 8 Deluxe (SDK 4.4.0; [PR #331](https://github.com/seedds/nxnative/pull/331)).
 
-### Malformed later command lists and bounded histogram logging
+### Listas de comandos posteriores malformadas e logging de histograma limitado
 
-- **Symptom:** ASan reports a stack-buffer-overflow in `capture` while logging the first full command histogram; a malformed list can also consume sink discovery or return PCM before its invalid tail is checked.
-- **Cause:** a short valid list selected the header layout without running the histogram. A later malformed list entered the histogram scan, which stopped at its first invalid command but still logged an uninitialized string or adopted a sink from the valid prefix. Separately, accumulating `snprintf`'s untruncated return value advanced the next write past the 512-byte string.
-- **Fix:** validate the entire command list on every capture before histogram, sink discovery or PCM output. Keep discovery pending for rejected lists, initialize the histogram string, and stop appending at the last complete entry that fits.
-- **Check:** `t_audren_layout` covers malformed first, middle and trailing commands after layout selection, recovery to valid stereo PCM for SDK 4/5/6/16/21, and 64,000 synthetic commands whose histogram exceeds the log buffer. ASan reproduced both the uninitialized-string read and the truncated-append write before the fix.
-- **Found on:** synthetic command lists from the [issue #313 static-analysis audit](https://github.com/seedds/nxnative/issues/313#issuecomment-6543080671); no gameplay failure was attributed to these logging defects.
+- **Sintoma:** o ASan aponta um stack-buffer-overflow em `capture` ao registrar o primeiro histograma completo de comandos; uma lista malformada também pode consumir a descoberta de sink ou retornar PCM antes de sua cauda inválida ser checada.
+- **Causa:** uma lista válida curta selecionava o layout de cabeçalho sem rodar o histograma. Uma lista malformada posterior entrava na varredura do histograma, que parava no primeiro comando inválido mas ainda registrava uma string não inicializada ou adotava um sink do prefixo válido. Separadamente, o valor de retorno não truncado de `snprintf` acumulado avançava a próxima escrita além da string de 512 bytes.
+- **Correção:** valide a lista de comandos inteira em toda captura antes de histograma, descoberta de sink ou saída de PCM. Mantenha a descoberta pendente para listas recusadas, inicialize a string do histograma e pare de acrescentar na última entrada completa que cabe.
+- **Checagem:** `t_audren_layout` cobre comandos primeiro, do meio e de cauda malformados depois da seleção de layout, a recuperação para PCM estéreo válido nas SDKs 4/5/6/16/21, e 64.000 comandos sintéticos cujo histograma excede o buffer do log. O ASan reproduzia tanto a leitura da string não inicializada quanto a escrita de acréscimo truncado antes da correção.
+- **Encontrado em:** listas de comandos sintéticas da [auditoria de análise estática da issue #313](https://github.com/seedds/nxnative/issues/313#issuecomment-6543080671); nenhuma falha de jogabilidade foi atribuída a esses defeitos de logging.
 
-### The final mix is taken from the DeviceSink's mix buffers
+### O mix final é tirado dos buffers de mix do DeviceSink
 
-- **Symptom:** the CPU processor drops the final mix.
-- **Cause:** `dsp::SendCommandBuffer`, `dsp::Wait` and `dsp::Signal` are stubs in the application build, and DeviceSink (command 0x13) is a no-op in `CommandListProcessor::Process`.
-- **Fix:** take the output after `Process` from the mix buffers the DeviceSink command names (layout in `hle_audren.c`).
+- **Sintoma:** o processador de CPU descarta o mix final.
+- **Causa:** `dsp::SendCommandBuffer`, `dsp::Wait` e `dsp::Signal` são stubs no build da aplicação, e DeviceSink (comando 0x13) é um no-op em `CommandListProcessor::Process`.
+- **Correção:** pegue a saída depois de `Process` nos buffers de mix que o comando DeviceSink nomeia (layout em `hle_audren.c`).
 
-### SDK 4: DeviceSink is command 0xf of 0x130 bytes
+### SDK 4: DeviceSink é o comando 0xf de 0x130 bytes
 
-- **Symptom:** no sound: `[RED] audren: no DeviceSink (ID 0x10) in the command list, 0 commands of 0x148 bytes`.
-- **Cause:** SDK 4's command list has SDK 6's header, but its DeviceSink (`CommandBuffer::GenerateDeviceSinkCommand`, `sdk+0x19e690`) is ID 0xf and 0x130 bytes: device name +0x14, upsample buffer +0x118, input count +0x120, input indices as bytes from +0x124.
-- **Fix:** `capture` takes the one 0x130-byte command with 1 to 6 inputs when there is no 0x148-byte one (`g_sink4` in `hle_audren.c`).
-- **Found on:** Mario Kart 8 Deluxe (4.0.0, SDK 4.4.0; one boot).
-- **Note:** its `AudioRenderSystem::Update` (`sdk+0x19b77c`) locks an `nn::os::MutexType` at +0x1d0, not SDK 16's `SdkMutexType` at +0x1f0; see [The renderer's update lock (`update_lock`)](#the-renderers-update-lock-update_lock).
+- **Sintoma:** nenhum som: `[RED] audren: no DeviceSink (ID 0x10) in the command list, 0 commands of 0x148 bytes`.
+- **Causa:** a lista de comandos da SDK 4 tem o cabeçalho da SDK 6, mas seu DeviceSink (`CommandBuffer::GenerateDeviceSinkCommand`, `sdk+0x19e690`) é o ID 0xf com 0x130 bytes: nome do dispositivo +0x14, buffer de upsample +0x118, contagem de inputs +0x120, índices de input como bytes a partir de +0x124.
+- **Correção:** `capture` pega o único comando de 0x130 bytes com 1 a 6 inputs quando não há um de 0x148 bytes (`g_sink4` em `hle_audren.c`).
+- **Encontrado em:** Mario Kart 8 Deluxe (4.0.0, SDK 4.4.0; um boot).
+- **Nota:** seu `AudioRenderSystem::Update` (`sdk+0x19b77c`) trava um `nn::os::MutexType` em +0x1d0, não o `SdkMutexType` da SDK 16 em +0x1f0; veja [O lock de update do renderizador (`update_lock`)](#o-lock-de-update-do-renderizador-update_lock).
 
-### SDK 6: the DSP command header layout
+### SDK 6: o layout de cabeçalho de comando DSP
 
-- **Symptom:** no sound; red `audren: command 1 in the command list is malformed (magic 0 size 0)`.
-- **Cause:** SDK 6's DSP command header is +0x04 size (s16), +0x06 command ID (s16), +0x10 enabled, where SDK 8–20 have +0x04 enabled, +0x05 ID, +0x06 size (`CommandListProcessor::Process`, `sdk+0xaaa00`); its DeviceSink is ID 0x10.
-- **Fix:** `capture` in `hle_audren.c` takes the layout whose walk finds the 0xcafebabe magic on every command of the first valid list; [incomplete startup lists](#incomplete-startup-lists-must-not-select-the-command-layout) leave detection open.
-- **Found on:** Fire Emblem: Three Houses (SDK 6.5.0).
+- **Sintoma:** nenhum som; vermelho `audren: command 1 in the command list is malformed (magic 0 size 0)`.
+- **Causa:** o cabeçalho de comando DSP da SDK 6 é +0x04 tamanho (s16), +0x06 ID do comando (s16), +0x10 habilitado, onde as SDKs 8–20 têm +0x04 habilitado, +0x05 ID, +0x06 tamanho (`CommandListProcessor::Process`, `sdk+0xaaa00`); seu DeviceSink é o ID 0x10.
+- **Correção:** `capture` em `hle_audren.c` pega o layout cujo percurso acha o magic 0xcafebabe em todo comando da primeira lista válida; [listas de partida incompletas](#listas-de-partida-incompletas-nao-devem-selecionar-o-layout-de-comandos) deixam a detecção aberta.
+- **Encontrado em:** Fire Emblem: Three Houses (SDK 6.5.0).
 
-### SDK 5: a startup list that walks in two layouts, and a 0x138-byte DeviceSink
+### SDK 5: uma lista de partida que percorre em dois layouts, e um DeviceSink de 0x138 bytes
 
-- **Symptom:** no sound: `[RED] audren: no DeviceSink (ID 0x13) in the command list, 0 commands of 0x148 bytes` and `[RED] audren: command 2 in the command list is malformed (offset 0x3e, …)`, with `first-frame commands 13, by command ID:  0×2`.
-- **Cause:** SDK 5.4.0's command list has SDK 6's header. Its first list holds two commands, the first of ID 0x14 and 0x14 bytes, so it walks in the SDK 8–20 layout as well (the ID read as the size), and that layout was taken because it is tried first. Its DeviceSink (`CommandBuffer::GenerateDeviceSinkCommand`, `sdk+0x233890`) is SDK 4's (ID 0xf, device name +0x14, upsample buffer +0x118, input count +0x120) but 0x138 bytes, with the input indices as s16 from +0x124.
-- **Fix:** `capture` in `hle_audren.c` takes a header layout only from a list that walks in exactly one; a list that walks in none or in several is a silent frame. The sink scan takes the one 0x130-byte (s8 indices) or 0x138-byte (s16 indices, `g_sink5`) command with 1 to 6 inputs. `t_audren_layout` covers SDK 5 and Bastion's first list.
-- **Found on:** Bastion (1.0.0, SDK 5.4.0).
+- **Sintoma:** nenhum som: `[RED] audren: no DeviceSink (ID 0x13) in the command list, 0 commands of 0x148 bytes` e `[RED] audren: command 2 in the command list is malformed (offset 0x3e, …)`, com `first-frame commands 13, by command ID:  0×2`.
+- **Causa:** a lista de comandos da SDK 5.4.0 tem o cabeçalho da SDK 6. Sua primeira lista tem dois comandos, o primeiro com ID 0x14 e 0x14 bytes, então também é percorrida no layout das SDKs 8–20 (o ID lido como o tamanho), e esse layout era tomado porque é tentado primeiro. Seu DeviceSink (`CommandBuffer::GenerateDeviceSinkCommand`, `sdk+0x233890`) é o da SDK 4 (ID 0xf, nome do dispositivo +0x14, buffer de upsample +0x118, contagem de inputs +0x120) mas com 0x138 bytes, com os índices de input como s16 a partir de +0x124.
+- **Correção:** `capture` em `hle_audren.c` toma um layout de cabeçalho só de uma lista que percorre em exatamente um; uma lista que percorre em nenhum ou em vários é um frame silencioso. A varredura de sink pega o único comando de 0x130 bytes (índices s8) ou 0x138 bytes (índices s16, `g_sink5`) com 1 a 6 inputs. `t_audren_layout` cobre a SDK 5 e a primeira lista de Bastion.
+- **Encontrado em:** Bastion (1.0.0, SDK 5.4.0).
 
-### Unaligned command headers during layout probing
+### Cabeçalhos de comando desalinhados durante a sondagem de layout
 
-- **Symptom:** UBSan reports a misaligned `uint32_t` load in `cmd_ok` while `t_audren_layout` probes SDK 4/6 lists (issue #409).
-- **Cause:** interpreting the command ID as another layout's size can advance the candidate pointer off word alignment. Typed header loads then have undefined C behavior even though arm64 supports the machine load. A wrong size could also take the next header outside the generated list.
-- **Fix:** `cmd_size`, `cmd_id` and the magic check decode multibyte wire fields with `memcpy`. `cmd_ok` verifies that the complete header and command fit before consuming them; malformed-command diagnostics do not dereference a rejected header. All supported SDK layouts use the same readers, with no game gate.
-- **Check:** `t_audren_layout` checks deliberately unaligned headers, every truncated header/body length, invalid signed sizes and stereo PCM for SDK 4/6/16/21, including recovery from incomplete startup lists. The shipped SDK 6 processor reads the enabled byte at +0x10 before dispatching any command, confirming the 0x11-byte minimum used by the parser. Its UBSan alignment suppression was removed.
-- **Found on:** the sanitizer audit's SDK 4/6 fixtures, representing Mario Kart 8 Deluxe and Fire Emblem: Three Houses; no game crash was attributed to this undefined load.
+- **Sintoma:** o UBSan aponta uma load de `uint32_t` desalinhada em `cmd_ok` enquanto `t_audren_layout` sonda listas das SDKs 4/6 (issue #409).
+- **Causa:** interpretar o ID do comando como o tamanho de outro layout pode avançar o ponteiro candidato para fora do alinhamento de palavra. As loads de cabeçalho tipadas têm então comportamento indefinido em C embora o arm64 suporte a load de máquina. Um tamanho errado também podia levar o próximo cabeçalho para fora da lista gerada.
+- **Correção:** `cmd_size`, `cmd_id` e a checagem de magic decodificam campos de fio multibyte com `memcpy`. `cmd_ok` verifica que o cabeçalho completo e o comando cabem antes de consumi-los; os diagnósticos de comando malformado não dereferenciam um cabeçalho recusado. Todos os layouts de SDK suportados usam os mesmos leitores, sem gate de jogo.
+- **Checagem:** `t_audren_layout` confere cabeçalhos deliberadamente desalinhados, todos os comprimentos de cabeçalho/corpo truncados, tamanhos assinados inválidos e PCM estéreo para as SDKs 4/6/16/21, incluindo a recuperação de listas de partida incompletas. O processador embarcado da SDK 6 lê o byte habilitado em +0x10 antes de despachar qualquer comando, confirmando o mínimo de 0x11 bytes usado pelo parser. A supressão de alinhamento do UBSan dele foi removida.
+- **Encontrado em:** as fixtures das SDKs 4/6 da auditoria de sanitizers, representando Mario Kart 8 Deluxe e Fire Emblem: Three Houses; nenhum crash de jogo foi atribuído a essa load indefinida.
 
-### SDK 8: command IDs numbered differently
+### SDK 8: IDs de comando numerados de outro jeito
 
-- **Symptom:** no music and no sound effects, only the movies' sound (the log repeats `audren: first-frame commands …` every frame and never prints `DeviceSink inputs`).
-- **Cause:** SDK 8 numbers the DSP commands differently: its command list goes 4×6, 7×24, 11×2, 16×1, 21×1 where SDK 20's goes 7×6, 11×24, 15×2, 20×1, 25×1, and the output command (DeviceSink, the same 0x148-byte layout with device name `MainAudioOut`, six inputs) is 0x10, not SDK 16's 0x13. The host never found it and played silence.
-- **Fix:** when the expected ID is missing from the first full command list, `capture` in `hle_audren.c` now takes the one 0x148-byte command with 1 to 6 inputs as the sink and logs the ID it adopted.
-- **Found on:** The Legend of Zelda: Link's Awakening (SDK 8.2.0).
+- **Sintoma:** nenhuma música nem efeitos sonoros, só o som dos vídeos (o log repete `audren: first-frame commands …` a cada frame e nunca imprime `DeviceSink inputs`).
+- **Causa:** a SDK 8 numera os comandos DSP de outro jeito: sua lista de comandos vai 4×6, 7×24, 11×2, 16×1, 21×1 onde a da SDK 20 vai 7×6, 11×24, 15×2, 20×1, 25×1, e o comando de saída (DeviceSink, o mesmo layout de 0x148 bytes com nome de dispositivo `MainAudioOut`, seis inputs) é o 0x10, não o 0x13 da SDK 16. O host nunca o achava e tocava silêncio.
+- **Correção:** quando o ID esperado falta na primeira lista de comandos completa, `capture` em `hle_audren.c` agora pega o único comando de 0x148 bytes com 1 a 6 inputs como o sink e registra o ID que adotou.
+- **Encontrado em:** The Legend of Zelda: Link's Awakening (SDK 8.2.0).
 
-### SDK 20's `AudioRenderSystem` layout
+### O layout `AudioRenderSystem` da SDK 20
 
-- **Cause:** in SDK 20 the getters the host used (`GetExecutionMode`, `GetRenderingDevice`, `GetCommandBufferWorkBufferSize`) are inlined away, `GenerateCommand` takes and returns a `Span<std::byte>` (the generated list comes back in x0 / x1), the device and mode are words at +0x48 / +0x4c, the command buffer is at +0xf8 / +0x100, and `UpdateImpl` locks the mutex at +0x2d0 instead of +0x1f0. The DeviceSink command became ID 0x14 (SDK 20 inserted a command before it) with the same layout.
-- **Fix:** `render_once` picks the layout by whether the Span version of `GenerateCommand` exists (`hle_audren.c`).
-- **Found on:** The Legend of Zelda: Breath of the Wild.
-- **Note:** the render thread's call takes another route in this SDK too: see [The render thread's route through the public `ExecuteAudioRendererRendering` (SDK 20)](#the-render-threads-route-through-the-public-executeaudiorendererrendering-sdk-20); the update lock at +0x2d0 is in [The renderer's update lock (`update_lock`)](#the-renderers-update-lock-update_lock).
+- **Causa:** na SDK 20 os getters que o host usava (`GetExecutionMode`, `GetRenderingDevice`, `GetCommandBufferWorkBufferSize`) são inlined, `GenerateCommand` toma e devolve um `Span<std::byte>` (a lista gerada volta em x0 / x1), o dispositivo e o modo são palavras em +0x48 / +0x4c, o command buffer está em +0xf8 / +0x100, e `UpdateImpl` trava o mutex em +0x2d0 em vez de +0x1f0. O comando DeviceSink virou o ID 0x14 (a SDK 20 inseriu um comando antes dele) com o mesmo layout.
+- **Correção:** `render_once` escolhe o layout pelo existir ou não a versão Span de `GenerateCommand` (`hle_audren.c`).
+- **Encontrado em:** The Legend of Zelda: Breath of the Wild.
+- **Nota:** a chamada da render thread toma outro caminho nesta SDK também: veja [O caminho da render thread pelo público `ExecuteAudioRendererRendering` (SDK 20)](#o-caminho-da-render-thread-pelo-publico-executeaudiorendererrendering-sdk-20); o lock de update em +0x2d0 está em [O lock de update do renderizador (`update_lock`)](#o-lock-de-update-do-renderizador-update_lock).
 
-### SDK 21 DSP command header without a magic
+### Cabeçalho de comando DSP da SDK 21 sem magic
 
-- **Symptom:** no sound; red `audren: command 0 in the command list is malformed (first word 0x181901 size 0)`.
-- **Cause:** SDK 21's DSP command header has no magic: +0x00 enabled (bit 0), +0x01 command ID, +0x02 size (s16), +0x04 estimated time, +0x08 node ID (`CommandListProcessor::Process`, `sdk+0x24fd50`), and every command body moved 8 bytes forward. DeviceSink is still ID 0x14 but 0x140 bytes: input count +0x128, input indices +0x12c, upsample buffer +0x120 (written at `sdk+0x23a7b0`). `AudioRenderSystem` keeps SDK 20's offsets (update lock +0x2d0).
-- **Fix:** `capture` (`hle_audren.c`) tries this layout when neither magic walk works, bounded by the generated list's length. Its first lists hold 4 commands or fewer, so the layout is now chosen on the first non-empty list.
-- **Found on:** Rhythm Heaven Groove (SDK 21.4.0, one boot).
+- **Sintoma:** nenhum som; vermelho `audren: command 0 in the command list is malformed (first word 0x181901 size 0)`.
+- **Causa:** o cabeçalho de comando DSP da SDK 21 não tem magic: +0x00 habilitado (bit 0), +0x01 ID do comando, +0x02 tamanho (s16), +0x04 tempo estimado, +0x08 ID do nó (`CommandListProcessor::Process`, `sdk+0x24fd50`), e todo corpo de comando se moveu 8 bytes para frente. DeviceSink ainda é o ID 0x14 mas com 0x140 bytes: contagem de inputs +0x128, índices de input +0x12c, buffer de upsample +0x120 (escrito em `sdk+0x23a7b0`). `AudioRenderSystem` mantém os offsets da SDK 20 (lock de update +0x2d0).
+- **Correção:** `capture` (`hle_audren.c`) tenta este layout quando nenhum percurso de magic funciona, limitado pelo comprimento da lista gerada. Suas primeiras listas têm 4 comandos ou menos, então o layout agora é escolhido na primeira lista não vazia.
+- **Encontrado em:** Rhythm Heaven Groove (SDK 21.4.0, um boot).
 
-## AudioOut and devices
+## AudioOut e dispositivos
 
-### Periodic diagnostics outside the AudioUnit callback
+### Diagnósticos periódicos fora do callback do AudioUnit
 
-- **Symptom:** RealtimeSanitizer reports stdio locking in `au_render` at its 2,000-callback diagnostic boundary. A busy log writer can block that callback even when its PCM queue is full.
-- **Cause:** `LOG` takes `stderr`'s stream lock and formats its message on the calling thread. The callback previously called it directly for its frame-count, queue-depth and underrun statistics.
-- **Fix:** the callback publishes a bounded snapshot for the existing audio watchdog, which copies ready reports under the output-registry lock and writes them after unlocking. Its local copies own every log argument; a slow writer holds neither an output pointer nor the registry lock. The single-slot mailbox uses release/acquire ownership; a busy writer leaves the callback accumulating later windows instead of waiting or overwriting unread data. Reports retain the output ID, total callbacks, frame range, average queue depth and underrun/zero-padding counts, with the actual window length when several windows merge. The release-event notifier remains independent of diagnostics, so an event-driven game can keep refilling PCM while logging is blocked. Close stops the producer and takes any remaining snapshot under the same registry lock before freeing the output.
-- **Found on:** the [synthetic real-time audio audit in issue #313](https://github.com/seedds/nxnative/issues/313#issuecomment-6523656102). No particular game's audible failure is attributed to this finding.
-- **Check:** `t_audio_stats` calls the real callback with synthetic PCM and traps callback-thread stdio, including its stream lock. With the watchdog's writer deliberately blocked, each PCM buffer still triggers its guest release event and is refilled correctly; queued and merged reports preserve their fields. Close drains a second pending snapshot while the watchdog holds only a local copy, which it logs after the output was freed. Statistics alone cause no guest event. The fixture needs no sound device or game files.
+- **Sintoma:** o RealtimeSanitizer aponta locking de stdio em `au_render` na sua fronteira de diagnóstico de 2.000 callbacks. Um escritor de log ocupado pode bloquear esse callback mesmo quando a fila de PCM dele está cheia.
+- **Causa:** `LOG` pega o lock de stream de `stderr` e formata a mensagem na thread chamadora. O callback antes a chamava diretamente para suas estatísticas de contagem de frames, profundidade da fila e underruns.
+- **Correção:** o callback publica um snapshot limitado para o watchdog de áudio existente, que copia relatórios prontos sob o lock do registro de saídas e os escreve depois de destravar. As cópias locais dele possuem todo argumento de log; um escritor lento não segura nem um ponteiro de saída nem o lock do registro. A caixa de correio de slot único usa posse release/acquire; um escritor ocupado deixa o callback acumulando as janelas seguintes em vez de esperar ou sobrescrever dados não lidos. Os relatórios mantêm o ID da saída, o total de callbacks, a faixa de frames, a profundidade média da fila e as contagens de underrun/zero-padding, com o comprimento real da janela quando várias janelas se fundem. O notificador de evento de liberação permanece independente dos diagnósticos, então um jogo dirigido por eventos pode continuar reenchendo o PCM enquanto o logging está bloqueado. O close para o produtor e pega o snapshot restante sob o mesmo lock do registro antes de liberar a saída.
+- **Encontrado em:** a [auditoria sintética de áudio em tempo real da issue #313](https://github.com/seedds/nxnative/issues/313#issuecomment-6523656102). Nenhuma falha audível de jogo específico é atribuída a esse achado.
+- **Checagem:** `t_audio_stats` chama o callback real com PCM sintético e intercepta o stdio da thread do callback, incluindo seu lock de stream. Com o escritor do watchdog deliberadamente bloqueado, cada buffer de PCM ainda dispara seu evento de liberação do convidado e é reenchido corretamente; relatórios na fila e fundidos preservam seus campos. O close drena um segundo snapshot pendente enquanto o watchdog segura só uma cópia local, que ele registra depois que a saída foi liberada. Estatísticas sozinhas não causam nenhum evento do convidado. A fixture não precisa de dispositivo de som nem de arquivos de jogo.
 
-### AudioOut release notification can sleep with pending work
+### A notificação de liberação do AudioOut pode dormir com trabalho pendente
 
-- **Symptom:** PCM is consumed correctly and its buffer reaches the released queue, but the guest release event never arrives. The notifier is asleep with `notify_pending=1` and `notify_armed=0`.
-- **Cause:** the notifier cleared `notify_armed` with a release-only store before checking `notify_pending`. A producer could publish pending work and see the old armed value, leaving the notifier to wake itself; without acquiring that producer's exchange, the notifier could read stale pending state and sleep. Apple-silicon code generated a store-release followed by acquire-PC loads, which permit this ordering.
-- **Fix:** disarm with an acquire-release exchange. If the producer's armed exchange precedes it, the notifier acquires the pending publication. Otherwise the producer sees zero and posts, or finds the notifier already re-armed with its own semaphore post. No timeout, polling, callback logging or audio pacing changes are needed.
-- **Found on:** shared CI's `t_audio_stats` ASan/UBSan fixture, reproduced locally without a sound device or game. This is a general AudioOut mechanism; no gameplay reproduction is claimed.
-- **Check:** the existing blocked-diagnostics cases remain intact. The fixture also renders and individually reclaims 100,000 event-driven PCM buffers, so releases cannot be hidden by bulk notification coalescing. The old notifier naturally strands a release in this case; diagnostics distinguish event delivery, PCM contents and returned-buffer identity without retrying the failed wait.
+- **Sintoma:** o PCM é consumido corretamente e seu buffer chega à fila de liberados, mas o evento de liberação do convidado nunca chega. O notificador está dormindo com `notify_pending=1` e `notify_armed=0`.
+- **Causa:** o notificador limpava `notify_armed` com uma store somente-release antes de checar `notify_pending`. Um produtor podia publicar trabalho pendente e ver o valor armed antigo, deixando o notificador se acordar sozinho; sem adquirir a exchange daquele produtor, o notificador podia ler um estado pending obsoleto e dormir. O código gerado para Apple silicon produzia uma store-release seguida de acquire-PC loads, que permitem essa ordenação.
+- **Correção:** desarme com uma exchange acquire-release. Se a exchange armed do produtor a precede, o notificador adquire a publicação pending. Caso contrário o produtor vê zero e publica, ou encontra o notificador já rearmado com seu próprio post do semaphore. Nenhuma mudança de timeout, polling, logging de callback ou cadência de áudio é necessária.
+- **Encontrado em:** a fixture ASan/UBSan `t_audio_stats` da CI compartilhada, reproduzida localmente sem dispositivo de som nem jogo. Este é um mecanismo geral do AudioOut; nenhuma reprodução em jogabilidade é alegada.
+- **Checagem:** os casos existentes de diagnósticos bloqueados permanecem intactos. A fixture também renderiza e recupera individualmente 100.000 buffers de PCM dirigidos por eventos, então liberações não podem ser escondidas pelo coalescing em bloco de notificações. O notificador antigo naturalmente encalha uma liberação neste caso; os diagnósticos distinguem a entrega de eventos, o conteúdo do PCM e a identidade do buffer devolvido sem retentar a espera que falhou.
 
-### Stopping an AudioOut releases its pending buffers
+### Parar um AudioOut libera seus buffers pendentes
 
-- **Symptom:** FMOD waits for buffer release after stopping an AudioOut, hanging the game during a scene transition.
-- **Cause:** the host stopped its backend but left unplayed and partially played buffers in the pending queue, so no callback could release them.
-- **Fix:** after stopping a started backend, `au_release_pending` moves the pending buffers to the released queue in order, resets the partial-buffer position and signals the client's release event and the host waiter. Calling Stop on an already stopped output preserves buffers queued for its next Start.
-- **Found on:** Pokémon Brilliant Diamond: reported on 1.0.0 in [PR #190](https://github.com/seedds/nxnative/pull/190); the 1.3.0 bring-up passed that transition before this fix.
-- **Check:** `t_audio_spsc` covers a partially consumed buffer, queue wraparound, release notification, repeated Stop and buffers queued before Start, then runs its 100,000-buffer producer/consumer stress test.
+- **Sintoma:** o FMOD espera pela liberação de buffers depois de parar um AudioOut, travando o jogo durante uma transição de cena.
+- **Causa:** o host parava seu backend mas deixava na fila pendente buffers não tocados e tocados parcialmente, então nenhum callback podia liberá-los.
+- **Correção:** depois de parar um backend iniciado, `au_release_pending` move os buffers pendentes para a fila de liberados em ordem, reseta a posição do buffer parcial e sinaliza o evento de liberação do cliente e o waiters do host. Chamar Stop numa saída já parada preserva os buffers enfileirados para seu próximo Start.
+- **Encontrado em:** Pokémon Brilliant Diamond: reportado na 1.0.0 no [PR #190](https://github.com/seedds/nxnative/pull/190); a bring-up da 1.3.0 passou aquela transição antes desta correção.
+- **Checagem:** `t_audio_spsc` cobre um buffer parcialmente consumido, o wraparound da fila, a notificação de liberação, Stop repetido e buffers enfileirados antes do Start, depois roda seu teste de estresse produtor/consumidor de 100.000 buffers.
 
-### RemoteIO's default I/O buffer duration
+### A duração padrão do buffer de E/S do RemoteIO
 
-- **Symptom:** crackling on iOS only.
-- **Cause:** RemoteIO asks for as many frames per callback as the audio session's I/O buffer duration, about 21 ms by default (1024 frames at 48 kHz), while the renderer then kept 4 blocks × 5 ms = 20 ms in flight (12 now: [Blocks in flight to the output](#blocks-in-flight-to-the-output-dm_audio_blocks)). Every callback came up 1.3 ms short and was padded with zeros, about 47 gaps per second. Reproduced on the Mac by forcing 1024-frame callbacks (`DM_DBG_AU_FRAMES=1024` with `DM_AUDIO=1`: 1999 underruns in 2000 callbacks).
-- **Fix:** `AVAudioSession` `setPreferredIOBufferDuration:0.005` (and 48 kHz) before the game opens audio and again on return to the foreground (`front_ios_audio_session` in `front_ios.m`); the device then calls back with 240 frames and nothing underruns.
-- **Check:** when checking a new device, read the host's `audio #N device callbacks` line, normally reported every 2000 callbacks: frames per callback, queued blocks, underruns. A busy diagnostic writer can merge windows; the line states their actual callback count.
+- **Sintoma:** estalos só no iOS.
+- **Causa:** o RemoteIO pede tantos frames por callback quanto a duração do buffer de E/S da sessão de áudio, cerca de 21 ms por padrão (1024 frames a 48 kHz), enquanto o renderizador então mantinha 4 blocos × 5 ms = 20 ms em voo (12 agora: [Blocos em voo para a saída](#blocos-em-voo-para-a-saida-dm_audio_blocks)). Cada callback chegava 1,3 ms curto e era preenchido com zeros, cerca de 47 lacunas por segundo. Reproduzido no Mac forçando callbacks de 1024 frames (`DM_DBG_AU_FRAMES=1024` com `DM_AUDIO=1`: 1999 underruns em 2000 callbacks).
+- **Correção:** `AVAudioSession` `setPreferredIOBufferDuration:0.005` (e 48 kHz) antes de o jogo abrir áudio e de novo ao voltar ao primeiro plano (`front_ios_audio_session` em `front_ios.m`); o dispositivo então faz callback com 240 frames e nada sofre underrun.
+- **Checagem:** ao conferir um dispositivo novo, leia a linha `audio #N device callbacks` do host, normalmente reportada a cada 2000 callbacks: frames por callback, blocos na fila, underruns. Um escritor de diagnósticos ocupado pode fundir janelas; a linha declara a contagem real de callbacks delas.
 
-### The Mac's default I/O buffer
+### O buffer de E/S padrão do Mac
 
-- **Symptom:** clicks and dropouts on the Mac, heard as clipping; the log's `audio #N device callbacks` lines show hundreds of underruns per 2000 callbacks. Closing an output can also log `[RED] audio device buffer: ... (status 560947818)` (`!obj`).
-- **Cause:** the Mac's default output asks for 512 device frames per callback (10.7 ms at 48 kHz; 557 frames of the 48 kHz stream when the device runs at 44.1 kHz), more than a game that keeps only a few small blocks queued has ready every time. Unicorn Overlord on a MacBook Pro's speakers: 250–290 underruns in every 2000 callbacks at 48 kHz (0.1–0.2 s of zeros), about 1,000 at 44.1 kHz. Whether a game underruns depends on how much it queues: 13 Sentinels (2.8 blocks queued, like Unicorn Overlord's 3.0, but larger ones) had none at 512 frames.
-- **Fix:** like iOS's session buffer, the Mac sets its output unit's device buffer to about 5 ms of device frames (`kAudioDevicePropertyBufferFrameSize`, 240 at 48 kHz, 221 at 44.1 kHz), within the device's supported range (`au_buffer` in `hle_audio.c`). It reapplies this when the default output changes and when the same device's output sample rate changes; `CurrentDevice` alone does not notify a rate change. An unchanged buffer is not written again, since a write can itself notify the format listener. Both listeners are removed before uninitializing or disposing the unit, including a failed open: disposal otherwise calls the listener after the device has gone (`!obj`). The log reads back the actual frame count. `DM_DBG_AU_FRAMES=N` asks N frames instead.
-- **Found on:** Unicorn Overlord (Asian release 1.05 on the Mac).
-- **Check:** [PR #262](https://github.com/seedds/nxnative/pull/262) reports Unicorn Overlord at 240 frames: 0 underruns in 10,000 callbacks; 13 Sentinels stays at 0. A silent Core Audio probe on a Mac mini reproduced the disposal error and the stale buffer after a rate change, then verified the fixes: default output switched between USB at 48 kHz and speakers at 44.1 kHz with callbacks continuing, and the same speakers at 44.1 / 96 / 48 kHz used 221 / 480 / 240 frames. The original default output and device rates were restored. `make -C dm/host/tests GAME=<id> audio-device` checks setup, device and rate notifications, scope filtering, buffer limits, synchronous notifications, the diagnostic override, absent devices, close and failed-open listener cleanup without audio hardware.
-- **Open:** the listed HDMI output was not retained as the system default during the probe, so switching to it remains unvalidated. The probe verifies silent host playback; gameplay listening after these listener changes has not been repeated.
+- **Sintoma:** cliques e dropouts no Mac, ouvidos como clipping; as linhas `audio #N device callbacks` do log mostram centenas de underruns por 2000 callbacks. Fechar uma saída também pode registrar `[RED] audio device buffer: ... (status 560947818)` (`!obj`).
+- **Causa:** a saída padrão do Mac pede 512 frames de dispositivo por callback (10,7 ms a 48 kHz; 557 frames do stream de 48 kHz quando o dispositivo roda a 44,1 kHz), mais do que um jogo que mantém só alguns blocos pequenos na fila tem pronto toda vez. Unicorn Overlord nos alto-falantes de um MacBook Pro: 250–290 underruns em cada 2000 callbacks a 48 kHz (0,1–0,2 s de zeros), cerca de 1.000 a 44,1 kHz. Se um jogo sofre underrun depende de quanto ele enfileira: 13 Sentinels (2,8 blocos na fila, como os 3,0 de Unicorn Overlord, mas maiores) não tinha nenhum com 512 frames.
+- **Correção:** como o buffer de sessão do iOS, o Mac define o buffer de dispositivo da sua unidade de saída para cerca de 5 ms de frames de dispositivo (`kAudioDevicePropertyBufferFrameSize`, 240 a 48 kHz, 221 a 44,1 kHz), dentro da faixa suportada pelo dispositivo (`au_buffer` em `hle_audio.c`). Ele reaplica isso quando a saída padrão muda e quando a taxa de amostragem de saída do mesmo dispositivo muda; só `CurrentDevice` não notifica uma mudança de taxa. Um buffer inalterado não é escrito de novo, já que uma escrita pode ela mesma notificar o listener de formato. Ambos os listeners são removidos antes de desinicializar ou descartar a unidade, incluindo uma abertura que falhou: o descarte de outro modo chama o listener depois que o dispositivo se foi (`!obj`). O log lê de volta a contagem real de frames. `DM_DBG_AU_FRAMES=N` pede N frames em vez disso.
+- **Encontrado em:** Unicorn Overlord (lançamento asiático 1.05 no Mac).
+- **Checagem:** o [PR #262](https://github.com/seedds/nxnative/pull/262) reporta Unicorn Overlord a 240 frames: 0 underruns em 10.000 callbacks; 13 Sentinels fica em 0. Uma sonda Core Audio silenciosa num Mac mini reproduziu o erro de descarte e o buffer obsoleto depois de uma mudança de taxa, depois verificou as correções: a saída padrão alternou entre USB a 48 kHz e alto-falantes a 44,1 kHz com os callbacks continuando, e os mesmos alto-falantes a 44,1 / 96 / 48 kHz usaram 221 / 480 / 240 frames. As taxas originais de saída padrão e de dispositivo foram restauradas. `make -C dm/host/tests GAME=<id> audio-device` confere a configuração, as notificações de dispositivo e de taxa, a filtragem de escopo, os limites de buffer, as notificações síncronas, o override de diagnóstico, dispositivos ausentes, o close e a limpeza de listeners na abertura que falha sem hardware de áudio.
+- **Em aberto:** a saída HDMI listada não foi retida como padrão do sistema durante a sonda, então mudar para ela continua não validado. A sonda verifica a reprodução silenciosa do host; a escuta em jogabilidade depois dessas mudanças de listeners não foi repetida.
 
-### The ring / silent switch muted the game on iOS
+### A chave ring / silent silenciava o jogo no iOS
 
-- **Symptom:** a game is silent on an iPhone whose ring / silent switch is set to silent, though the volume is up; a game or video app plays through the switch.
-- **Cause:** the audio session's category was `AVAudioSessionCategorySoloAmbient`, which iOS silences with the switch.
-- **Fix:** `front_ios_audio_session` in `front_ios.m` sets `AVAudioSessionCategoryPlayback`: the switch no longer mutes the game, and it still interrupts other apps' audio, as `SoloAmbient` did. The host still suspends its output when the app goes to the background (no background audio mode is declared).
-- **Found on:** The Legend of Zelda: Breath of the Wild (iPhone: reported by the player); also [issue #155](https://github.com/seedds/nxnative/issues/155), whose commenter has to toggle the switch to hear any game.
-- **Check:** open question, not run on a device: with the switch on silent, the game's sound should play; the log's `audio session:` line shows the session came up.
+- **Sintoma:** um jogo fica mudo num iPhone cuja chave ring / silent está no silêncio, embora o volume esteja alto; um app de jogo ou vídeo toca apesar da chave.
+- **Causa:** a categoria da sessão de áudio era `AVAudioSessionCategorySoloAmbient`, que o iOS silencia com a chave.
+- **Correção:** `front_ios_audio_session` em `front_ios.m` define `AVAudioSessionCategoryPlayback`: a chave não silencia mais o jogo, e ele ainda interrompe o áudio de outros apps, como `SoloAmbient` fazia. O host ainda suspende sua saída quando o app vai para segundo plano (nenhum modo de áudio em segundo plano é declarado).
+- **Encontrado em:** The Legend of Zelda: Breath of the Wild (iPhone: reportado pelo jogador); também a [issue #155](https://github.com/seedds/nxnative/issues/155), cujo comentarista tem de alternar a chave para ouvir qualquer jogo.
+- **Checagem:** questão em aberto, não executado num dispositivo: com a chave no silêncio, o som do jogo deve tocar; a linha `audio session:` do log mostra que a sessão subiu.
 
-### Interruptions that stop RemoteIO callbacks
+### Interrupções que param os callbacks do RemoteIO
 
-- **Symptom:** sound stays silent after Siri, an alarm, a call or another app's audio; a game whose audio thread waits for its buffers back (Wwise's poll-only output, FMOD) then waits forever.
-- **Cause:** iOS stops calling the RemoteIO unit back without stopping it, so the host still thinks the output plays.
-- **Fix:** three layers handle it:
-  - `front_ios.m` observes `AVAudioSessionInterruptionNotification` (began → the silent sink stands in, ended → session up again and resume; becoming active also ends an interruption whose "ended" never came);
-  - `front_ios.m` also observes `AVAudioSessionMediaServicesWereResetNotification` (`dm_audio_reset` recreates every AudioUnit);
-  - a watchdog in `hle_audio.c` switches any started output whose device has not called back for 200 ms in focus to the silent sink, retrying the AudioUnit after 1, 2, 4, 8 s. A start that fails (session still held by a call) falls back the same way instead of aborting.
-- **Check:** the log shows `audio session: interrupted`, `the device has not called back for N ms` and `AudioUnit restarted`. `tests/t_audio.c` (in `dm/host`) scenario 3 stops a playing AudioUnit behind the host's back.
+- **Sintoma:** o som continua mudo depois de Siri, um alarme, uma ligação ou o áudio de outro app; um jogo cujo thread de áudio espera seus buffers de volta (a saída só-poll do Wwise, o FMOD) então espera para sempre.
+- **Causa:** o iOS para de chamar a unidade RemoteIO de volta sem pará-la, então o host ainda acha que a saída toca.
+- **Correção:** três camadas cuidam disso:
+  - `front_ios.m` observa `AVAudioSessionInterruptionNotification` (began → o sink silencioso entra em ação, ended → sessão reerguida e retomada; ficar ativo também encerra uma interrupção cujo "ended" nunca chegou);
+  - `front_ios.m` também observa `AVAudioSessionMediaServicesWereResetNotification` (`dm_audio_reset` recria toda AudioUnit);
+  - um watchdog em `hle_audio.c` troca qualquer saída iniciada cujo dispositivo não faz callback há 200 ms em primeiro plano pelo sink silencioso, retentando a AudioUnit depois de 1, 2, 4, 8 s. Um start que falha (sessão ainda retida por uma ligação) recorre do mesmo jeito em vez de abortar.
+- **Checagem:** o log mostra `audio session: interrupted`, `the device has not called back for N ms` e `AudioUnit restarted`. O cenário 3 de `tests/t_audio.c` (em `dm/host`) para uma AudioUnit tocando pelas costas do host.
 
-### AudioUnit construction before output publication
+### Construção da AudioUnit antes da publicação da saída
 
-- **Symptom:** TSan reports `au_create` writing `a->au` while `au_watchdog` reads it under `g_aos_lock` when a second real output opens (issue #410).
-- **Cause:** `au_open_at` put the output into the lifecycle/watchdog registry before joining its AudioUnit construction helper. The registry lock did not order the helper's writes.
-- **Fix:** construct and join while the output is private, then publish it under `g_aos_lock`. Suspend, resume, reset and watchdog readers only discover the completed output. Construction remains outside that lock because joining the helper can yield the guest core.
-- **Check:** `t_audio_device` asserts from inside AudioUnit creation that the pending output is absent from the registry; it failed before the fix. `t_audio` exercises real output lifetimes and watchdog recovery under TSan with the `au_create` suppression removed.
-- **Found on:** host unit tests; no particular game's failure was attributed to this race.
+- **Sintoma:** o TSan aponta `au_create` escrevendo `a->au` enquanto `au_watchdog` o lê sob `g_aos_lock` quando uma segunda saída real abre (issue #410).
+- **Causa:** `au_open_at` punha a saída no registro de tempo de vida/watchdog antes de juntar seu helper de construção da AudioUnit. O lock do registro não ordenava as escritas do helper.
+- **Correção:** construa e junte enquanto a saída é privada, depois publique sob `g_aos_lock`. Suspend, resume, reset e leitores do watchdog só descobrem a saída concluída. A construção continua fora daquele lock porque juntar o helper pode ceder o core do convidado.
+- **Checagem:** `t_audio_device` afirma de dentro da criação da AudioUnit que a saída pendente está ausente do registro; falhava antes da correção. `t_audio` exercita tempos de vida de saídas reais e a recuperação do watchdog sob TSan com a supressão de `au_create` removida.
+- **Encontrado em:** testes de unidade do host; nenhuma falha de jogo específico foi atribuída a essa corrida.
 
-### Audio across a background round trip on the Mac
+### Áudio através de uma ida e volta ao segundo plano no Mac
 
-`DM_AUDIO=1 DM_AUDIO_MUTE=1` takes the real Core Audio path with the output silenced, and `DM_OE_SCRIPT="bg=1@60,bg=0@66"` runs the same sequence as the iOS lifecycle callbacks (focus, audio take-over, guest clock freeze, graphics suspend). Send `dmhost` `SIGSTOP` / `SIGCONT` between the two to imitate iOS suspending the process. The silent sink that stands in while in the background does not make up the time the process was suspended (it used to pull seconds' worth at once and log hundreds of underruns).
+`DM_AUDIO=1 DM_AUDIO_MUTE=1` pega o caminho real do Core Audio com a saída silenciada, e `DM_OE_SCRIPT="bg=1@60,bg=0@66"` roda a mesma sequência que os callbacks de ciclo de vida do iOS (foco, tomada de áudio, congelamento do relógio do convidado, suspensão gráfica). Envie `SIGSTOP` / `SIGCONT` a `dmhost` entre os dois para imitar o iOS suspendendo o processo. O sink silencioso que entra em ação enquanto em segundo plano não repõe o tempo em que o processo ficou suspenso (ele costumava puxar segundos de uma vez e registrar centenas de underruns).
 
-### Several outputs at once (`audio #N`)
+### Várias saídas ao mesmo tempo (`audio #N`)
 
-- **Symptom:** combined numbers mislead: one fully fed output plus one fed by nobody look like "every other callback underruns, 2.0 blocks queued".
-- **Cause:** a game may open several outputs. Engage opens one AudioOut from Wwise (`main+0x177d924`, no release event, the game polls); on the phone it opened a second one later, and the Mac runs never did. Unity's FMOD also has an output (`main+0x4aec0c` / `0x4aec4c`).
-- **Fix:** the host logs each output as `audio #N`: the open with its call site, Start / Stop / Close (the first 32 per output), and the callback statistics normally every 2000 of that output's callbacks, through the [watchdog](#periodic-diagnostics-outside-the-audiounit-callback).
-- **Found on:** Fire Emblem Engage.
+- **Sintoma:** números combinados enganam: uma saída totalmente alimentada mais uma alimentada por ninguém parecem "cada callback alternado sofre underrun, 2,0 blocos na fila".
+- **Causa:** um jogo pode abrir várias saídas. Engage abre um AudioOut do Wwise (`main+0x177d924`, sem evento de liberação, o jogo faz polling); no celular ele abria um segundo mais tarde, e as execuções no Mac nunca abriam. O FMOD da Unity também tem uma saída (`main+0x4aec0c` / `0x4aec4c`).
+- **Correção:** o host registra cada saída como `audio #N`: a abertura com seu call site, Start / Stop / Close (os primeiros 32 por saída), e as estatísticas de callback normalmente a cada 2000 callbacks daquela saída, através do [watchdog](#diagnosticos-periodicos-fora-do-callback-do-audiounit).
+- **Encontrado em:** Fire Emblem Engage.
 
-### Checking audio without listening
+### Conferir áudio sem escutar
 
-`DM_AUDIO_DUMP=file` writes the PCM the host plays (16-bit, 48 kHz, stereo). RMS per second, clipping share, spectral flatness (music ≈ 0.1–0.5, white noise ≈ 0.85) and the strongest FFT peaks (they should land on musical notes) tell real music from noise or silence.
+`DM_AUDIO_DUMP=file` grava o PCM que o host reproduz (16-bit, 48 kHz, estéreo). RMS por segundo, percentual de clipping, planicidade espectral (música ≈ 0,1–0,5, ruído branco ≈ 0,85) e os picos de FFT mais fortes (eles devem cair em notas musicais) distinguem música real de ruído ou silêncio.
 
-### AudioOut volume kept per output
+### Volume do AudioOut mantido por saída
 
-- **Symptom:** a null read at `sdk+0x1f2314` as the first movie starts (the title menu's background, right after the first press), in `nn::audio::SetAudioOutVolume`, called from `main+0x1c4fbc`.
-- **Cause:** the call is on the AudioOut the game opens for the movie's AAC sound (`OpenDefaultAudioOut` without an event, `main+0x1c48c0`). The SDK's version calls the audout session's virtual method, and the host never made the session. The game sets the volume every frame while a movie plays.
-- **Fix:** the host keeps the volume per output and scales the PCM16 it plays, saturating; `GetAudioOutVolume` reads it back (`hle_audio.c`).
-- **Found on:** STEINS;GATE RE:BOOT (SDK 20.5.17, M2's ADV engine; the one call it needed).
+- **Sintoma:** uma leitura nula em `sdk+0x1f2314` quando o primeiro vídeo começa (o fundo do menu do título, logo depois da primeira pressão), em `nn::audio::SetAudioOutVolume`, chamada de `main+0x1c4fbc`.
+- **Causa:** a chamada é no AudioOut que o jogo abre para o som AAC do vídeo (`OpenDefaultAudioOut` sem evento, `main+0x1c48c0`). A versão da SDK chama o método virtual da sessão audout, e o host nunca criou a sessão. O jogo define o volume a cada frame enquanto um vídeo toca.
+- **Correção:** o host mantém o volume por saída e escala o PCM16 que reproduz, com saturação; `GetAudioOutVolume` o lê de volta (`hle_audio.c`).
+- **Encontrado em:** STEINS;GATE RE:BOOT (SDK 20.5.17, engine ADV da M2; a única chamada de que precisava).
 
-### AudioOut buffer count from the host queue
+### Contagem de buffers do AudioOut pela fila do host
 
-- **Symptom:** a null read in `audio::GetAudioOutBufferCount` on Wwise's sink wakeup thread (`sdk+0x1e7ed0`, from `main+0x30faae8`).
-- **Cause:** after every release event Wwise asks how many buffers are still queued and marks the sink starved at 0; the SDK's version read the audout session the host never made.
-- **Fix:** it answers from the host queue: appended and not yet played to the end (`hle_audio.c`).
-- **Found on:** Pokémon Legends: Z-A (19.3.11; one boot).
+- **Sintoma:** uma leitura nula em `audio::GetAudioOutBufferCount` na thread de wakeup do sink do Wwise (`sdk+0x1e7ed0`, de `main+0x30faae8`).
+- **Causa:** depois de todo evento de liberação o Wwise pergunta quantos buffers ainda estão na fila e marca o sink como faminto em 0; a versão da SDK lia a sessão audout que o host nunca criou.
+- **Correção:** ele responde pela fila do host: acrescentados e ainda não tocados até o fim (`hle_audio.c`).
+- **Encontrado em:** Pokémon Legends: Z-A (19.3.11; um boot).
 
-### Audio device output volume and names
+### Volume e nomes de saída do dispositivo de áudio
 
-- **Symptom:** an abort in `sm::Initialize` under `audio::GetAudioDeviceOutputVolume` (the game thread, `main+0xee8edc`).
-- **Fix:** the volume `SetAudioDeviceOutputVolume` sets is now kept and read back (`hle_audren.c`). `audio::GetAudioOutName` is hooked too.
-- **Found on:** DRAGON QUEST VII Reimagined (SDK 19.3.1, Unreal Engine 4.27: `GetAudioDeviceOutputVolume`); 13 Sentinels: Aegis Rim (SDK 11: `GetAudioOutName`).
-- **Note:** older SDKs name some device calls differently (`ListAudioDeviceName` / `GetActiveAudioDeviceName`, `OpenDefaultAudioOut` in SDK 12; [Older SDK names for the same calls](services.md#older-sdk-names-for-the-same-calls)), and Super Mario Odyssey (SDK 7) aborted in `audio::AcquireAudioDeviceSwitchNotification` ([SDK calls that open a system service through sm](services.md#sdk-calls-that-open-a-system-service-through-sm)).
+- **Sintoma:** um abort em `sm::Initialize` sob `audio::GetAudioDeviceOutputVolume` (o thread do jogo, `main+0xee8edc`).
+- **Correção:** o volume que `SetAudioDeviceOutputVolume` define agora é mantido e lido de volta (`hle_audren.c`). `audio::GetAudioOutName` também é hookado.
+- **Encontrado em:** DRAGON QUEST VII Reimagined (SDK 19.3.1, Unreal Engine 4.27: `GetAudioDeviceOutputVolume`); 13 Sentinels: Aegis Rim (SDK 11: `GetAudioOutName`).
+- **Nota:** SDKs antigas nomeiam algumas chamadas de dispositivo de outro jeito (`ListAudioDeviceName` / `GetActiveAudioDeviceName`, `OpenDefaultAudioOut` na SDK 12; [Nomes de SDK antigas para as mesmas chamadas](services.md#older-sdk-names-for-the-same-calls)), e Super Mario Odyssey (SDK 7) abortou em `audio::AcquireAudioDeviceSwitchNotification` ([Chamadas de SDK que abrem um serviço de sistema através do sm](services.md#sdk-calls-that-open-a-system-service-through-sm)).
 
-### No audio input devices
+### Sem dispositivos de entrada de áudio
 
-- **Symptom:** SDL3's audio driver lists the input devices (AudioIn) when its audio starts. `[RED] sf: the game connects to service audren:u itself`, then `nn::diag abort: Result 0xe15` under `audio::AcquireAudioDeviceNotificationForInput` (`sdk+0x5633c`).
-- **Cause:** the host has no microphone. The input device-change notification goes through the audio device service, like the output one the host answers.
-- **Fix:** `ListAudioIns` reports none, both opens fail, and the calls that need an open AudioIn answer without touching the game's object (`hle_audio.c`). `AcquireAudioDeviceNotificationForInput` binds an event that is never signaled and returns 0x499 when acquired again, as the SDK does with a flag of its own (SDK 13.3.0 `sdk+0x56300`: `+0x851`, the output's `+0x852`; `hle_audren.c`).
-- **Found on:** Absolum (SDK 18.3.2, FNA on .NET NativeAOT with SDL3; one boot each); Portal 2 (SDK 13.3.0: its audio thread at start, `main+0x19f37c`).
+- **Sintoma:** o driver de áudio do SDL3 lista os dispositivos de entrada (AudioIn) quando seu áudio inicia. `[RED] sf: the game connects to service audren:u itself`, depois `nn::diag abort: Result 0xe15` sob `audio::AcquireAudioDeviceNotificationForInput` (`sdk+0x5633c`).
+- **Causa:** o host não tem microfone. A notificação de mudança de dispositivo de entrada passa pelo serviço de dispositivos de áudio, como a de saída que o host responde.
+- **Correção:** `ListAudioIns` não reporta nenhum, ambas as aberturas falham, e as chamadas que precisam de um AudioIn aberto respondem sem tocar no objeto do jogo (`hle_audio.c`). `AcquireAudioDeviceNotificationForInput` vincula um evento que nunca é sinalizado e retorna 0x499 quando adquirido de novo, como a SDK faz com uma flag sua (SDK 13.3.0 `sdk+0x56300`: `+0x851`, o `+0x852` da saída; `hle_audren.c`).
+- **Encontrado em:** Absolum (SDK 18.3.2, FNA em .NET NativeAOT com SDL3; um boot cada); Portal 2 (SDK 13.3.0: seu thread de áudio no início, `main+0x19f37c`).
 
-### Virtual input devices listed through `auddmg:u` (SDK 22)
+### Dispositivos de entrada virtuais listados por `auddmg:u` (SDK 22)
 
-- **Symptom:** a Switch 2 game aborts at boot with `game called nn::diag abort: Result 0xa99` at `sdk+0x1f61ac` (sdk `1643a838`), under `nn::audio::ListVirtualInputDevices`, whatever the game's microphone setting.
-- **Cause:** SDK 22's input stream API (the Switch 2's replacement for AudioIn) lists its devices through a device manager that the SDK's own `ListVirtualInputDevices` initializes first; that connects to `auddmg:u`, which the host does not serve, and the SDK aborts on the failed connect. A game's microphone manager can list the devices at construction, before any open.
-- **Fix:** `hle_audio.c` hooks `ListVirtualInputDevices` (`h_ai_ListVirtual`): 0 devices, as `ListAudioIns` ([No audio input devices](#no-audio-input-devices)), logged once with its call site. 0 is also what the SDK returns for a zero-length list, and a game checks the count before `OpenInputStream`. `GetTrueRawAudioInputDevice` needs no hook: it copies a constant name.
-- **Found on:** [The Legend of Zelda: Ocarina of Time](../../dm/games/0400486024DEC000/README.md) (SDK 22.2.8, Android): its microphone manager (constructor `main+0xed1440`, open `main+0xf4860c`, list `main+0xf48128`) skips the open with no device (`main+0xf4812c`); the boot goes on (checked on the phone).
+- **Sintoma:** um jogo de Switch 2 aborta no boot com `game called nn::diag abort: Result 0xa99` em `sdk+0x1f61ac` (sdk `1643a838`), sob `nn::audio::ListVirtualInputDevices`, seja qual for o ajuste de microfone do jogo.
+- **Causa:** a API de stream de entrada da SDK 22 (a substituta da Switch 2 para o AudioIn) lista seus dispositivos por um gerenciador de dispositivos que o próprio `ListVirtualInputDevices` da SDK inicializa primeiro; aquilo conecta a `auddmg:u`, que o host não atende, e a SDK aborta na conexão que falha. O gerenciador de microfone de um jogo pode listar os dispositivos na construção, antes de qualquer abertura.
+- **Correção:** `hle_audio.c` hooka `ListVirtualInputDevices` (`h_ai_ListVirtual`): 0 dispositivos, como `ListAudioIns` ([Sem dispositivos de entrada de áudio](#sem-dispositivos-de-entrada-de-audio)), registrado uma vez com seu call site. 0 também é o que a SDK retorna para uma lista de comprimento zero, e um jogo confere a contagem antes de `OpenInputStream`. `GetTrueRawAudioInputDevice` não precisa de hook: ele copia um nome constante.
+- **Encontrado em:** [The Legend of Zelda: Ocarina of Time](../../dm/games/0400486024DEC000/README.md) (SDK 22.2.8, Android): seu gerenciador de microfone (construtor `main+0xed1440`, abertura `main+0xf4860c`, lista `main+0xf48128`) pula a abertura sem dispositivo (`main+0xf4812c`); o boot continua (conferido no celular).
 
-### `OpenAudioOut` without a release event (SDK 22)
+### `OpenAudioOut` sem evento de liberação (SDK 22)
 
-- **Symptom:** `game called nn::diag abort: Result 0xe15, call site sdk+0x1f8704`, i.e. inside `nn::audio::CreateAudioOutManagerByHipc+0xb4`, before any audio device opened.
-- **Cause:** SDK 22 calls **`nn::audio::OpenAudioOut(AudioOut*, const char*, const AudioOutParameter&)`** (`sdk+0x1f7914`, `nn::audio::OpenAudioOut(AudioOut*, const char*, const AudioOutParameter&)`'s failure path) — the overload without the `SystemEvent` the host implemented (`_ZN2nn5audio12OpenAudioOutEPNS0_8AudioOutEPKcRKNS0_17AudioOutParameterEPNS_2os11SystemEventE`). With no hook the SDK's own IPC path ran and the audout service is not there.
-- **Fix:** `hle_audio.c` gained the 4-argument hook, which opens through the same `au_open_at` and leaves the release event NULL (`au_open_at(g, NULL, name, param, __builtin_return_address(0))`), so the output polls its released buffers. The log then reads `OpenAudioOut … , no release event (the game polls)`.
-- **Found on:** Well Dweller (SDK 22.2.0); the game's first `AudioOut` is the "DeviceOut" form, the second its 48 kHz music output.
+- **Sintoma:** `game called nn::diag abort: Result 0xe15, call site sdk+0x1f8704`, isto é, dentro de `nn::audio::CreateAudioOutManagerByHipc+0xb4`, antes de qualquer dispositivo de áudio aberto.
+- **Causa:** a SDK 22 chama **`nn::audio::OpenAudioOut(AudioOut*, const char*, const AudioOutParameter&)`** (`sdk+0x1f7914`, o caminho de falha de `nn::audio::OpenAudioOut(AudioOut*, const char*, const AudioOutParameter&)`) — a overload sem o `SystemEvent` que o host implementava (`_ZN2nn5audio12OpenAudioOutEPNS0_8AudioOutEPKcRKNS0_17AudioOutParameterEPNS_2os11SystemEventE`). Sem hook, o caminho de IPC da própria SDK rodava e o serviço audout não está lá.
+- **Correção:** `hle_audio.c` ganhou o hook de 4 argumentos, que abre pelo mesmo `au_open_at` e deixa o evento de liberação NULL (`au_open_at(g, NULL, name, param, __builtin_return_address(0))`), então a saída faz polling dos buffers liberados. O log então lê `OpenAudioOut … , no release event (the game polls)`.
+- **Encontrado em:** Well Dweller (SDK 22.2.0); o primeiro `AudioOut` do jogo é a forma "DeviceOut", o segundo é sua saída de música de 48 kHz.
 
 ## Codecs
 
-### Hardware Opus decoders built on the SDK's software decoders
+### Decodificadores Opus de hardware construídos sobre os decodificadores de software da SDK
 
-- **Symptom:** an abort in `sm::Initialize` under the hardware Opus decoder's C interface; for the multi-stream one, under `nn::codec::GetHardwareOpusMultiStreamDecoderWorkBufferSize(int, int, int, int, int)` (at `nnMain`, CRI's Opus streams). An abort in `sf::hipc::InitializeHipcServiceResolution` under `codec::GetHardwareOpusDecoderWorkBufferSize(int, int)` (`main+0x31f8e8`, early in `nnMain`). A game that builds `HardwareOpusMultiStreamDecoder` with the imported constructor and then calls it through its vtable.
-- **Cause:** the hardware decoders are a service. The `HardwareOpusMultiStreamDecoder` class's 12 vtable slots match the SDK's software `OpusMultiStreamDecoder` one by one. SDK 11 has a work buffer size form without the option argument; the host had only the three-argument one.
-- **Fix** (`hle_codec.c`):
-  - the classes: the constructor hook builds the software decoder in place (0x38 of the 0x48 bytes), as for the single-stream `HardwareOpusDecoder`; `GetHardwareOpusMultiStreamDecoderWorkBufferSize` returns the software size. Both destructors are a bare `ret`.
-  - the single-stream C interface (`GetHardwareOpusDecoderWorkBufferSize`, `InitializeHardwareOpusDecoder`, `DecodeOpusInterleavedWithHardware`, …) is forwarded to the `sdk`'s software `OpusDecoder` C interface with a host-held decoder state per game object.
-  - the multi-stream C interface, including the SDK 12+ overload with an option argument, goes to the `sdk`'s software `OpusMultiStreamDecoder` C interface, with a host-held state per game object as for the single-stream decoder. `GetHardwareOpusMultiStreamDecoderProcessingTime` reports 0.
-  - the two-argument `GetHardwareOpusDecoderWorkBufferSize` is hooked beside the three-argument one.
-- **Found on:** Hyrule Warriors: Age of Calamity (SDK 9.6: only the `HardwareOpusMultiStreamDecoder` class and the four-argument size); The Legend of Zelda: Tears of the Kingdom (1.4.3, the single-stream C interface); Big Brain Academy: Brain vs. Brain (SDK 11.4.3, the two-argument size); Unicorn Overlord (SDK 16.2.4, the multi-stream C interface; one boot).
+- **Sintoma:** um abort em `sm::Initialize` sob a interface C do decodificador Opus de hardware; para o multistream, sob `nn::codec::GetHardwareOpusMultiStreamDecoderWorkBufferSize(int, int, int, int, int)` (em `nnMain`, streams Opus da CRI). Um abort em `sf::hipc::InitializeHipcServiceResolution` sob `codec::GetHardwareOpusDecoderWorkBufferSize(int, int)` (`main+0x31f8e8`, no início de `nnMain`). Um jogo que constrói `HardwareOpusMultiStreamDecoder` com o construtor importado e depois o chama pela vtable.
+- **Causa:** os decodificadores de hardware são um serviço. Os 12 slots de vtable da classe `HardwareOpusMultiStreamDecoder` batem com o `OpusMultiStreamDecoder` de software da SDK um a um. A SDK 11 tem uma forma de tamanho de work buffer sem o argumento de opção; o host só tinha a de três argumentos.
+- **Correção** (`hle_codec.c`):
+  - as classes: o hook do construtor constrói o decodificador de software no lugar (0x38 dos 0x48 bytes), como para o `HardwareOpusDecoder` de stream único; `GetHardwareOpusMultiStreamDecoderWorkBufferSize` devolve o tamanho de software. Os dois destrutores são um `ret` puro.
+  - a interface C de stream único (`GetHardwareOpusDecoderWorkBufferSize`, `InitializeHardwareOpusDecoder`, `DecodeOpusInterleavedWithHardware`, …) é encaminhada à interface C do `OpusDecoder` de software do `sdk` com um estado de decodificador mantido pelo host por objeto do jogo.
+  - a interface C multistream, incluindo a overload da SDK 12+ com um argumento de opção, vai à interface C do `OpusMultiStreamDecoder` de software do `sdk`, com um estado mantido pelo host por objeto do jogo como no decodificador de stream único. `GetHardwareOpusMultiStreamDecoderProcessingTime` reporta 0.
+  - o `GetHardwareOpusDecoderWorkBufferSize` de dois argumentos é hookado ao lado do de três.
+- **Encontrado em:** Hyrule Warriors: Age of Calamity (SDK 9.6: só a classe `HardwareOpusMultiStreamDecoder` e o tamanho de quatro argumentos); The Legend of Zelda: Tears of the Kingdom (1.4.3, a interface C de stream único); Big Brain Academy: Brain vs. Brain (SDK 11.4.3, o tamanho de dois argumentos); Unicorn Overlord (SDK 16.2.4, a interface C multistream; um boot).
 
-## Timing and catch-up
+## Timing e catch-up
 
-### Blocks in flight to the output (`DM_AUDIO_BLOCKS`)
+### Blocos em voo para a saída (`DM_AUDIO_BLOCKS`)
 
-- **Symptom:** short dropouts in gameplay with real output; the `audio #N device callbacks` lines of the renderer's output (`AudioRenderer`) show underruns, and the render thread's own renders take far less than 5 ms on average.
-- **Cause:** the render thread renders a block only when the output hands one back, so the blocks in flight are all the cushion against a render thread that comes late. With 4 (20 ms) and AAudio's 384-frame buffer, a render thread 20–33 ms late (a stalled or preempted thread, a page fault, a catch-up render holding the render lock) left the device callback nothing to play.
-- **Fix:** 12 blocks (60 ms) by default; `DM_AUDIO_BLOCKS=N` keeps 2 to 32. Each block adds 5 ms of latency. The render thread renders the free blocks at start and after it was late; since the entry below, each of those backlog frames first waits briefly for the game's update. The catch-up queue (4 frames) is separate and unchanged.
-- **Found on:** [The Legend of Zelda: Ocarina of Time](../../dm/games/0400486024DEC000/README.md) (Switch 2 Edition) on a POCO F8 Pro (Android): host underruns with the render thread 20–33 ms late in gameplay. The 12-block default and the report below are not yet checked on the phone.
-- **Check:** the render thread reports every 2000 blocks it hands to the output (10 s): `audren: last 2000 blocks (N in flight): render thread … renders, mean / max …, lock wait max …; catch-up … renders, mean / max …, lock wait max …; a released block waited mean / max … for the render thread (max … after a sleep); render thread … major / … minor faults, … involuntary switches`. Render times count from before the render lock, split by caller: the render thread, and the catch-up frame a game's update renders on its own thread. The wait is from the moment the output released a block (stamped in its callback, which stays lock-free) to the render thread taking it; after a sleep it is the thread's wake-up delay, otherwise the thread was still busy. Faults and switches are the render thread's own over the window (`getrusage(RUSAGE_THREAD)`, Linux and Android; -1 elsewhere). A wait close to the blocks in flight × 5 ms means the cushion ran out; major faults or many involuntary switches point at memory pressure or the thread's priority rather than render cost.
+- **Sintoma:** dropouts curtos na jogabilidade com saída real; as linhas `audio #N device callbacks` da saída do renderizador (`AudioRenderer`) mostram underruns, e os próprios renders da render thread levam muito menos que 5 ms em média.
+- **Causa:** a render thread renderiza um bloco só quando a saída devolve um, então os blocos em voo são toda a folga contra uma render thread que chega atrasada. Com 4 (20 ms) e o buffer de 384 frames do AAudio, uma render thread 20–33 ms atrasada (um thread parado ou preemptido, um page fault, um catch-up render segurando o lock de render) deixava o callback do dispositivo sem nada para tocar.
+- **Correção:** 12 blocos (60 ms) por padrão; `DM_AUDIO_BLOCKS=N` mantém 2 a 32. Cada bloco acrescenta 5 ms de latência. A render thread renderiza os blocos livres na partida e depois de se atrasar; desde a entrada abaixo, cada um daqueles frames de backlog primeiro espera brevemente pelo update do jogo. A fila de catch-up (4 frames) é separada e inalterada.
+- **Encontrado em:** [The Legend of Zelda: Ocarina of Time](../../dm/games/0400486024DEC000/README.md) (Switch 2 Edition) num POCO F8 Pro (Android): underruns do host com a render thread 20–33 ms atrasada na jogabilidade. O padrão de 12 blocos e o relatório abaixo ainda não foram conferidos no celular.
+- **Checagem:** a render thread reporta a cada 2000 blocos que entrega à saída (10 s): `audren: last 2000 blocks (N in flight): render thread … renders, mean / max …, lock wait max …; catch-up … renders, mean / max …, lock wait max …; a released block waited mean / max … for the render thread (max … after a sleep); render thread … major / … minor faults, … involuntary switches`. Os tempos de render contam desde antes do lock de render, separados por chamador: a render thread, e o catch-up frame que o update de um jogo renderiza na própria thread dele. A espera vai do momento em que a saída liberou um bloco (carimbado no callback dele, que continua sem lock) até a render thread pegá-lo; depois de um sono é o atraso de despertada do thread, caso contrário o thread ainda estava ocupado. Faults e switches são do próprio thread de render na janela (`getrusage(RUSAGE_THREAD)`, Linux e Android; -1 alhures). Uma espera próxima de blocos em voo × 5 ms significa que a folga acabou; major faults ou muitos switches involuntários apontam para pressão de memória ou a prioridade do thread, não o custo de render.
 
-### Sound drops out while the output counters are clean
+### O som falha enquanto os contadores da saída estão limpos
 
-- **Symptom:** sound freezes or drops in and out in gameplay with real output, while every `audio #N device callbacks` line of the renderer's output shows 0 underruns, 0 ms zero-padded and 0 device-stream underruns, and the `audren: last 2000 blocks` lines show short renders.
-- **Cause (open):** those counters only show that the frames reached the speaker. Inside a frame, a voice the game did not refill in time plays silence. Two host mechanisms can cause this. (1) After a late wake-up the render thread rendered its backlog back to back: up to 9 frames (46 ms in Ocarina of Time) on one game state, with no RequestUpdate in between, while the audio DSP renders one frame every 5 ms and the game updates in between. (2) The render thread and the game's audio threads run at the same nice value as the game's other 60 threads. The game's own feeders can also starve (stream reads during page-fault storms, `aal::LowPrioWorkerThread` at priority 45).
-- **Fix:** (`hle_audren.c`) a backlog frame waits up to `DM_AUDREN_GATE_MS` (default 2 ms; `0` is the old behaviour) for the game's update after the frame before it, while 3 or more blocks are still queued. The render thread runs at nice `DM_AUDREN_NICE` (default -16, Linux / Android). `DM_AUDREN_UPDATE_NICE=<n>` (off by default) sets the nice value of the thread that calls RequestUpdate.
-- **Found on:** [The Legend of Zelda: Ocarina of Time](../../dm/games/0400486024DEC000/README.md) (Switch 2 Edition) on a POCO F8 Pro; not yet checked on the phone.
-- **Check:** every report adds three lines. `audren game updates:` gives the update interval and the delay from signal to update. Its histogram of frames rendered between two updates has a max that is ms of audio with no game update. It also shows catch-up queue waits and discarded catch-up frames (5 ms skipped each), backlog renders and gate hits / timeouts, and the SDK update-lock wait. `audren output signal:` gives zero frames, short zero gaps, 12 dB dips and data-source commands (voice channels) per frame. Its short falls are split by whether the game's last update was over 20 ms old. `audren threads over the window:` gives the RequestUpdate thread's and the `DM_AUDREN_WATCH` threads' run time, run-queue wait and major faults (Android).
+- **Sintoma:** o som congela ou falha dentro e fora na jogabilidade com saída real, enquanto cada linha `audio #N device callbacks` da saída do renderizador mostra 0 underruns, 0 ms de zero-padding e 0 underruns do stream do dispositivo, e as linhas `audren: last 2000 blocks` mostram renders curtos.
+- **Causa (em aberto):** aqueles contadores só mostram que os frames chegaram ao alto-falante. Dentro de um frame, uma voz que o jogo não reenchia a tempo toca silêncio. Dois mecanismos do host podem causar isso. (1) Depois de uma despertada atrasada a render thread renderizava seu backlog sem pausa: até 9 frames (46 ms em Ocarina of Time) num mesmo estado do jogo, sem RequestUpdate no meio, enquanto o DSP de áudio renderiza um frame a cada 5 ms e o jogo atualiza no meio. (2) A render thread e os threads de áudio do jogo rodam no mesmo valor nice que os outros 60 threads do jogo. Os alimentadores do próprio jogo também podem passar fome (leituras de stream durante tempestades de page fault, `aal::LowPrioWorkerThread` na prioridade 45).
+- **Correção:** (`hle_audren.c`) um frame de backlog espera até `DM_AUDREN_GATE_MS` (padrão 2 ms; `0` é o comportamento antigo) pelo update do jogo depois do frame anterior, enquanto 3 ou mais blocos ainda estão na fila. A render thread roda em nice `DM_AUDREN_NICE` (padrão -16, Linux / Android). `DM_AUDREN_UPDATE_NICE=<n>` (desligado por padrão) define o valor nice do thread que chama RequestUpdate.
+- **Encontrado em:** [The Legend of Zelda: Ocarina of Time](../../dm/games/0400486024DEC000/README.md) (Switch 2 Edition) num POCO F8 Pro; ainda não conferido no celular.
+- **Checagem:** cada relatório acrescenta três linhas. `audren game updates:` dá o intervalo de updates e o atraso do sinal até o update. Seu histograma de frames renderizados entre dois updates tem um máximo que são ms de áudio sem update do jogo. Ele também mostra esperas da fila de catch-up e frames de catch-up descartados (5 ms pulados cada), renders de backlog e acertos / timeouts do gate, e a espera do lock de update da SDK. `audren output signal:` dá frames zerados, lacunas de zeros curtas, quedas de 12 dB e comandos de fonte de dados (canais de voz) por frame. Suas quedas curtas são divididas por o último update do jogo ter mais de 20 ms. `audren threads over the window:` dá o tempo de execução, a espera na fila de execução e os major faults do thread de RequestUpdate e dos threads `DM_AUDREN_WATCH` (Android).
 
-### At least one rendered frame between two updates
+### Ao menos um frame renderizado entre dois updates
 
-- **Symptom:** the light limiter crashed on a null state pointer (`ApplyLightLimiterEffect`, `sdk+0x228494`).
-- **Cause:** an effect's "needs init" parameter state is set only in the update where the game flags it new; the next update copies the game's value over it. Mario updates twice in a row at start-up; with a real audio device the first frame came after both.
-- **Fix:** the `AudioRenderSystem::Update` hook renders a catch-up frame first when nothing was rendered since the last update.
-- **Found on:** Super Mario Bros. Wonder.
-- **Check:** `DM_AUDREN_TRACE=1` logs every update with the number of frames rendered since the previous one.
+- **Sintoma:** o light limiter derrubava num ponteiro de estado nulo (`ApplyLightLimiterEffect`, `sdk+0x228494`).
+- **Causa:** o estado de parâmetro "needs init" de um efeito é definido só no update em que o jogo o marca novo; o update seguinte copia o valor do jogo por cima. Mario atualiza duas vezes seguidas na inicialização; com um dispositivo de áudio real o primeiro frame veio depois de ambas.
+- **Correção:** o hook de `AudioRenderSystem::Update` renderiza um catch-up frame primeiro quando nada foi renderizado desde o último update.
+- **Encontrado em:** Super Mario Bros. Wonder.
+- **Checagem:** `DM_AUDREN_TRACE=1` registra cada update com o número de frames renderizados desde o anterior.
 
-### A sound driver that never waits on the renderer event
+### Um driver de som que nunca espera no evento do renderizador
 
-- **Symptom:** the sound runs about 50 times faster than the output; the loop runs 11,000 updates a second on one core.
-- **Cause:** Square Enix's `SQEX::Sd::Driver::Core::CoreAudioOut` (its loop at `main+0x442c5c0`) appends a wave buffer, mixes the next block on the same thread, calls `RequestUpdate` and takes the next released buffer. It waits on the renderer event only when no buffer is released. Every update there finds no frame rendered since the last one and renders a catch-up frame, which releases the buffer just appended, so the loop never waits. When a full catch-up queue discarded the frame, the loop ran unchecked.
-- **Fix:** an update with a full queue waits (at most 50 ms) for the render thread to play one queued frame, so catch-up frames keep real time (`hle_audren.c`). The render thread then only plays queued frames, and the driver's updates render every frame. A queued frame does not signal the renderer event (the SDK signals it in each render): signalled, an ordinary game woke, updated with nothing rendered since and rendered the next catch-up frame, so every frame became one (Big Brain Academy: Brain vs. Brain, about 38,000 catch-up renders instead of 37).
-- **Found on:** DRAGON QUEST XI S: Echoes of an Elusive Age – Definitive Edition.
-- **Check:** `audren: rendered 12000 frames, N of them not silent` shows whether a game's sound reaches the output.
+- **Sintoma:** o som roda cerca de 50 vezes mais rápido que a saída; o loop roda 11.000 updates por segundo num core.
+- **Causa:** o `SQEX::Sd::Driver::Core::CoreAudioOut` da Square Enix (seu loop em `main+0x442c5c0`) acrescenta um buffer de wave, mixa o próximo bloco na mesma thread, chama `RequestUpdate` e pega o próximo buffer liberado. Ele espera no evento do renderizador só quando nenhum buffer é liberado. Todo update ali acha que nenhum frame foi renderizado desde o anterior e renderiza um catch-up frame, que libera o buffer recém-acrescentado, então o loop nunca espera. Quando uma fila de catch-up cheia descartava o frame, o loop corria sem freio.
+- **Correção:** um update com a fila cheia espera (no máximo 50 ms) a render thread tocar um frame na fila, então os catch-up frames mantêm o tempo real (`hle_audren.c`). A render thread então só toca frames na fila, e os updates do driver renderizam todo frame. Um frame na fila não sinaliza o evento do renderizador (a SDK o sinaliza em cada render): sinalizado, um jogo comum acordava, atualizava sem nada renderizado e renderizava o próximo catch-up frame, então todo frame virava um (Big Brain Academy: Brain vs. Brain, cerca de 38.000 catch-up renders em vez de 37).
+- **Encontrado em:** DRAGON QUEST XI S: Echoes of an Elusive Age – Definitive Edition.
+- **Checagem:** `audren: rendered 12000 frames, N of them not silent` mostra se o som de um jogo chega à saída.

@@ -1,6 +1,6 @@
-# 03 — Host bring-up
+# 03 — Bring-up do host
 
-## The loop
+## O loop
 
 ```bash
 python3 dm/tools/patch_nso.py $W/data/v0/ExeFS/main $W/build/patched_v0 main   # and sdk
@@ -8,25 +8,25 @@ make -C dm/host GAME=<title ID> dmhost
 $W/run/boot.sh <log name> [seconds] [VAR=value ...]
 ```
 
-`boot.sh` runs `dmhost <patched dir>` with `DM_ROMFS`, `DM_SAVE`, `DM_TEMP`, `DM_MSL_DIR` set, under a perl `alarm` (a run that hits the time limit ends with `CRASH sig=14` — that is the alarm, not a crash). Logs go to `run/<name>.log`. Logs may contain non-UTF-8 bytes: use `grep -a` / `LC_ALL=C` when filtering.
+O `boot.sh` executa `dmhost <patched dir>` com `DM_ROMFS`, `DM_SAVE`, `DM_TEMP`, `DM_MSL_DIR` definidos, sob um `alarm` do perl (uma execução que atinge o limite de tempo termina com `CRASH sig=14` — isso é o alarm, não um crash). Os logs vão para `run/<name>.log`. Logs podem conter bytes não-UTF-8: use `grep -a` / `LC_ALL=C` ao filtrar.
 
-## Reading the log
+## Lendo o log
 
-| Marker | Meaning |
+| Marcador | Significado |
 |---|---|
-| `>>> nnosInitialize`, `>>> nnMain` | Boot stages reached |
-| `[RED] …` | Something unimplemented or wrong, printed once per kind. Collect them with `grep -aF "[RED]" log \| sort \| uniq -c` after every run |
-| `UNIMPL <name>` | A forced NVN / SDK stub was called |
-| `[nvn] frame N: … \| name=count …` | Per-frame NVN call counts (calls made on the frame thread; command buffers recorded elsewhere replay later) |
-| `[longframe]` | A long frame, with submit / GPU / pipeline / upload breakdown |
-| `memory up to frame N: resident … GPU allocated …` | Memory report (RSS, Metal allocated size). Printed when memory moves; steady growth here is a leak. A watchdog exits at 24 GB. Also: memory pools and how many are resident (pools join the residency set on first GPU use), finalized pool buffers still alive, the storage-sharing texture table, and on iOS `headroom to the system memory limit` (`os_proc_available_memory`, how far the app is from being killed for memory) |
-| `CRASH sig=… pc=… lr=…` + registers + `bt:` + `stack scan` + thread dump | Crash report: see [05](05-debugging.md) |
-| `thread 0x10xx 'name' … waits:<state> addr=…` | Thread dump: what each guest thread waits on (`address` = address arbiter, `mutex` = mutex with holder, `condvar`, `sync object`, `running/not waiting` = running); a thread waiting in an SVC also gets a `guest stack:` line, the words on its guest stack that point into a module (its callers when the code keeps no frame pointers) and x19–x28 |
+| `>>> nnosInitialize`, `>>> nnMain` | Estágios do boot atingidos |
+| `[RED] …` | Algo não implementado ou errado, impresso uma vez por tipo. Colete-os com `grep -aF "[RED]" log \| sort \| uniq -c` depois de cada execução |
+| `UNIMPL <name>` | Um stub forçado de NVN / SDK foi chamado |
+| `[nvn] frame N: … \| name=count …` | Contagens de chamadas NVN por frame (chamadas feitas na thread do frame; command buffers gravados em outro lugar são reproduzidos depois) |
+| `[longframe]` | Um frame longo, com a divisão por submit / GPU / pipeline / upload |
+| `memory up to frame N: resident … GPU allocated …` | Relatório de memória (RSS, tamanho alocado no Metal). Impresso quando a memória se move; crescimento constante aqui é um vazamento. Um watchdog encerra aos 24 GB. Também: os memory pools e quantos estão residentes (os pools entram no conjunto de residência no primeiro uso pela GPU), buffers de pools finalizados ainda vivos, a tabela de texturas com armazenamento compartilhado, e no iOS `headroom to the system memory limit` (`os_proc_available_memory`, o quão perto o app está de ser morto por memória) |
+| `CRASH sig=… pc=… lr=…` + registradores + `bt:` + `stack scan` + despejo de threads | Relatório de crash: veja [05](05-debugging.md) |
+| `thread 0x10xx 'name' … waits:<state> addr=…` | Despejo de threads: no que cada thread convidada espera (`address` = address arbiter, `mutex` = mutex com detentor, `condvar`, `sync object`, `running/not waiting` = executando); uma thread esperando num SVC também ganha uma linha `guest stack:`, as palavras na sua pilha convidada que apontam para dentro de um módulo (seus chamadores quando o código não mantém frame pointers) e x19–x28 |
 
-Useful switches: `DM_FS=1` (file opens, and not-found probes), `DM_SVC=1` (memory SVCs and other syscalls), `DM_THR=1` (thread SVCs), `DM_WATCH=<s>` (dump all threads after s seconds), `DM_WATCH_STALL=<s>` (dump when the frame loop stops progressing).
+Switches úteis: `DM_FS=1` (aberturas de arquivo, e sondas de não encontrado), `DM_SVC=1` (SVCs de memória e outras syscalls), `DM_THR=1` (SVCs de thread), `DM_WATCH=<s>` (despeja todas as threads depois de s segundos), `DM_WATCH_STALL=<s>` (despeja quando o loop de frames para de progredir).
 
-## Failure catalogue
+## Catálogo de falhas
 
-The failures met so far are filed by subsystem, one entry per mechanism (symptom, cause, fix, the games it was found on): [rewriter](../reference/rewriter.md), [memory and address space](../reference/memory.md), [threads](../reference/threads.md), [services and SDK calls](../reference/services.md), [movies](../reference/movies.md), [audio](../reference/audio.md), [frame rate](../reference/frame-rate.md), [NVN objects](../reference/nvn-objects.md) and [game state](../reference/game-state.md); graphics in [rendering](../reference/rendering.md) and [shaders](../reference/shaders.md). Most new-title failures are one of them in a new form, so search the [symptom index](symptoms.md) for the assertion, `[RED]` text, abort site or visible result first, then read the entry and the game notes it names.
+As falhas encontradas até agora são arquivadas por subsistema, uma entrada por mecanismo (sintoma, causa, correção, os jogos onde foi encontrada): [reescritor](../reference/rewriter.md), [memória e espaço de endereço](../reference/memory.md), [threads](../reference/threads.md), [serviços e chamadas de SDK](../reference/services.md), [vídeos](../reference/movies.md), [áudio](../reference/audio.md), [frame rate](../reference/frame-rate.md), [objetos NVN](../reference/nvn-objects.md) e [estado de jogo](../reference/game-state.md); gráficos em [renderização](../reference/rendering.md) e [shaders](../reference/shaders.md). A maioria das falhas de um título novo é uma delas numa forma nova, então procure no [índice de sintomas](symptoms.md) pela asserção, pelo texto `[RED]`, pelo ponto do abort ou pelo resultado visível primeiro, depois leia a entrada e as notas dos jogos que ela nomeia.
 
-A new finding goes to one place: a general mechanism as an entry in its reference (with a line in the symptom index), a fact about one game in that game's note (`dm/games/<id>/README.md`).
+Uma descoberta nova vai para um só lugar: um mecanismo geral como entrada na sua referência (com uma linha no índice de sintomas), um fato sobre um jogo na nota desse jogo (`dm/games/<id>/README.md`).

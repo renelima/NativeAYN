@@ -1,47 +1,47 @@
-# The Mac and iPhone builds
+# Os builds para Mac e iPhone
 
-This repository also holds the Mac, iPhone and iPad builds of the host it started from (MIT). They are not part of NativeAYN and were not changed or tested for it; their original README follows, unchanged except for its links and without its screenshot gallery (game screenshots are not kept in this repository). Credits: [NOTICE.md](../NOTICE.md).
+Este repositório também guarda os builds para Mac, iPhone e iPad do host de que o projeto partiu (MIT). Eles não fazem parte do NativeAYN e não foram alterados nem testados para ele; o README original deles segue abaixo, inalterado exceto pelos links e sem a sua galeria de screenshots (screenshots de jogos não ficam neste repositório). Créditos: [NOTICE.md](../NOTICE.md).
 
 ## nxnative
 
-Play your own Nintendo Switch games natively on iPhone and iPad. Bring your game (its NSP files) and your `prod.keys`; one script turns them into an IPA that you sideload.
+Jogue seus próprios jogos de Nintendo Switch nativamente no iPhone e no iPad. Traga seu jogo (seus arquivos NSP) e seus `prod.keys`; um script só os transforma em um IPA que você instala por sideloading.
 
-It is not an emulator: the game's own code runs directly on the Apple chip, with Switch graphics rebuilt on Metal. Nothing from any game is in this repository, and the project is not affiliated with Nintendo or any game publisher.
+Não é um emulador: o código do próprio jogo roda direto no chip da Apple, com os gráficos do Switch reconstruídos em Metal. Nada de nenhum jogo está neste repositório, e o projeto não tem afiliação com a Nintendo nem com nenhuma publicadora de jogos.
 
-Switch 2 games have started too: [Donkey Kong Bananza](../dm/games/040074A01BF12000/README.md) plays on the Mac, packed from a dump of the game; iPhone and iPad are untested.
+Os jogos de Switch 2 também começaram: [Donkey Kong Bananza](../dm/games/040074A01BF12000/README.md) roda no Mac, feito a partir de um dump do jogo; iPhone e iPad não foram testados.
 
-## Acknowledgements
+## Agradecimentos
 
-This project is built on other people's work ([licenses](../dm/third_party/README.md)):
+Este projeto é construído sobre o trabalho de outras pessoas ([licenças](../dm/third_party/README.md)):
 
-- **[d2r-mobile](https://github.com/jhaizhou-ops/d2r-mobile)** (MIT) developed this native-execution approach, for Diablo II: Resurrected. nxnative started as a copy of its generic parts: the NSO rewriter, the host that stands in for Horizon, the NVN-on-Metal layer and the iOS app shell. Fixes go both ways.
-- **Ryujinx** (MIT): its shader translator (`Ryujinx.Graphics.Shader`, `Ryujinx.Common` and `Spv.Generator` 1.3.2, in `dm/third_party/ryujinx` with a few fixes listed in [its README](../dm/third_party/ryujinx/README.md)) turns the games' shaders into SPIR-V; its Switch 2 task / mesh support is after [switch2mac](https://github.com/azmasm/switch2mac) (azmasm), with one GPL-3.0-or-later file from [Eglantine](https://github.com/djihads80/eglantine) (Eden Emulator Project), which makes the built translator GPL-3.0-or-later as a whole ([its README](../dm/third_party/ryujinx/README.md)). Its emulation of the kernel and system services is also a reference when the host's behaviour is in doubt.
-- **[Atmosphère](https://github.com/Atmosphere-NX/Atmosphere)**: its kernel, mesosphère, is the reference for Horizon's synchronization semantics (address arbiter, condition variables).
-- **[LibHac](https://github.com/Thealexbarney/LibHac)**: reads NSPs and layers updates over the base game in `dm/tools/nx_extract`.
-- **[SPIRV-Cross](https://github.com/KhronosGroup/SPIRV-Cross)**: SPIR-V to Metal Shading Language.
-- **[glslang](https://github.com/KhronosGroup/glslang)** compiles the GLSL of OpenGL games to SPIR-V for it.
-- **[MacNativeGames](https://github.com/ly05010419/MacNativeGames)** (MIT): the GPU widening of 8-bit indices and in-pass clears in `dm/gfx/nvn/nvn_mtl.m`, and the visibility-counter lowering in the shader translator.
+- **[d2r-mobile](https://github.com/jhaizhou-ops/d2r-mobile)** (MIT) desenvolveu essa abordagem de execução nativa, para Diablo II: Resurrected. O nxnative começou como uma cópia de suas partes genéricas: o rewriter de NSO, o host que faz as vezes do Horizon, a camada NVN-sobre-Metal e o shell do app iOS. As correções fluem nos dois sentidos.
+- **Ryujinx** (MIT): seu tradutor de shaders (`Ryujinx.Graphics.Shader`, `Ryujinx.Common` e `Spv.Generator` 1.3.2, em `dm/third_party/ryujinx` com algumas correções listadas em [seu README](../dm/third_party/ryujinx/README.md)) converte os shaders dos jogos em SPIR-V; seu suporte a tasks / mesh de Switch 2 vem depois do [switch2mac](https://github.com/azmasm/switch2mac) (azmasm), com um arquivo GPL-3.0-or-later do [Eglantine](https://github.com/djihads80/eglantine) (Eden Emulator Project), o que torna o tradutor compilado GPL-3.0-or-later como um todo ([seu README](../dm/third_party/ryujinx/README.md)). Sua emulação do kernel e dos serviços de sistema também serve de referência quando o comportamento do host está em dúvida.
+- **[Atmosphère](https://github.com/Atmosphere-NX/Atmosphere)**: seu kernel, o mesosphère, é a referência para a semântica de sincronização do Horizon (address arbiter, condition variables).
+- **[LibHac](https://github.com/Thealexbarney/LibHac)**: lê NSPs e sobrepõe updates ao jogo base em `dm/tools/nx_extract`.
+- **[SPIRV-Cross](https://github.com/KhronosGroup/SPIRV-Cross)**: SPIR-V para Metal Shading Language.
+- **[glslang](https://github.com/KhronosGroup/glslang)** compila o GLSL dos jogos de OpenGL para SPIR-V para ele.
+- **[MacNativeGames](https://github.com/ly05010419/MacNativeGames)** (MIT): o alargamento de GPU de índices de 8 bits e clears in-pass em `dm/gfx/nvn/nvn_mtl.m`, e o lowering de contadores de visibilidade no tradutor de shaders.
 
-## How to play
+## Como jogar
 
-Switch 2 games are built from a folder of their files, not from NSPs, and are tested on the Mac only: see [Switch 2 games](#switch-2-games).
+Jogos de Switch 2 são compilados a partir de uma pasta com seus arquivos, não de NSPs, e testados só no Mac: veja [Jogos de Switch 2](#jogos-de-switch-2).
 
-### With a Mac app
+### Com um app para Mac
 
-Community projects build on nxnative with Mac apps that turn your games into apps for your iPhone, iPad or Mac, with no command line, and keep them in a library. They are separate projects: questions and bugs about them go to their own pages.
+Projetos da comunidade constroem sobre o nxnative com apps para Mac que transformam seus jogos em apps para seu iPhone, iPad ou Mac, sem linha de comando, e os guardam em uma biblioteca. São projetos separados: dúvidas e bugs sobre eles vão para suas próprias páginas.
 
 - [NX2Apple](https://github.com/LNPANDY/NX2Apple)
 - [NX Play](https://github.com/varyform/nx-native-wrapper)
 - [NxNative Launcher](https://github.com/rennan101/nxnative_Launcher)
 - [LumaNX](https://github.com/Xc1Ym/LumaNX)
 
-### Build from the command line
+### Compilar pela linha de comando
 
-You need a Mac with macOS 26.6 or later, [Xcode](https://developer.apple.com/download/all/?q=Xcode%2027.2) 27.2, [Homebrew](https://brew.sh) and Python 3.12 or newer (an arm64 one, not an Intel Homebrew's). An iPhone build also needs Xcode's iOS platform (Xcode → Settings → Components).
+Você precisa de um Mac com macOS 26.6 ou mais recente, [Xcode](https://developer.apple.com/download/all/?q=Xcode%2027.2) 27.2, [Homebrew](https://brew.sh) e Python 3.12 ou mais novo (um arm64, não o de um Homebrew Intel). Um build para iPhone também precisa da plataforma iOS do Xcode (Xcode → Settings → Components).
 
-The shaders are built with Xcode 27.2's Metal compiler. Select it before step 1: `sudo xcode-select -s /Applications/Xcode.app`. With several Xcode versions installed, name this one `Xcode-27.2.app` and select it with `sudo xcode-select -s /Applications/Xcode-27.2.app`.
+Os shaders são compilados com o compilador Metal do Xcode 27.2. Selecione-o antes do passo 1: `sudo xcode-select -s /Applications/Xcode.app`. Com várias versões do Xcode instaladas, nomeie esta como `Xcode-27.2.app` e selecione-a com `sudo xcode-select -s /Applications/Xcode-27.2.app`.
 
-**1. Install the tools** (only once), in Terminal:
+**1. Instale as ferramentas** (uma só vez), no Terminal:
 
 ```
 xcodebuild -downloadComponent MetalToolchain
@@ -51,7 +51,7 @@ brew install --cask dotnet-sdk
 python3 -m pip install lz4 "capstone>=5,<6" fonttools nsz zbic "backports.zstd; python_version < '3.14'"
 ```
 
-**2. Put your game in a folder**: the game, plus its update and DLC if you have them (`.nsp`, `.xci`, `.nsz` or `.xcz`):
+**2. Coloque seu jogo em uma pasta**: o jogo, mais sua atualização e DLC se você os tiver (`.nsp`, `.xci`, `.nsz` ou `.xcz`):
 
 ```
 ~/Games/MarioWonder/
@@ -59,27 +59,27 @@ python3 -m pip install lz4 "capstone>=5,<6" fonttools nsz zbic "backports.zstd; 
   Super Mario Bros. Wonder [010015100B514800][v327680].nsp
 ```
 
-**3. Build**, with your game folder and your `prod.keys`:
+**3. Compile**, com a pasta do seu jogo e seus `prod.keys`:
 
 ```
 python3 scripts/build_ipa_from_nsp.py ~/Games/MarioWonder -k ~/keys/prod.keys
 ```
 
-The IPA appears in the game's folder. The first build takes 30–60 minutes and needs free disk space of about twice the game's size plus 10 GB; building again is much faster.
+O IPA aparece na pasta do jogo. O primeiro build leva 30–60 minutos e precisa de espaço livre em disco de cerca de duas vezes o tamanho do jogo mais 10 GB; compilar de novo é muito mais rápido.
 
-To play on the Mac instead, add `--platform mac-app`: you get a Mac app of the game to open from Finder. All options: [The packing script in detail](../docs/development.md#the-packing-script-in-detail).
+Para jogar no Mac, em vez disso, adicione `--platform mac-app`: você ganha um app do jogo para Mac para abrir pelo Finder. Todas as opções: [O script de packing em detalhe](../docs/development.md#the-packing-script-in-detail).
 
-### Install
+### Instalação
 
-Install the IPA on your iPhone or iPad with a sideloading tool such as AltStore, Sideloadly or LiveContainer. If your tool offers **Increased Memory Limit**, turn it on: the bigger games need it.
+Instale o IPA no seu iPhone ou iPad com uma ferramenta de sideloading como AltStore, Sideloadly ou LiveContainer. Se sua ferramenta oferecer **Increased Memory Limit**, ative: os jogos maiores precisam disso.
 
-Game too big to install? Build again with `--romfs separate`, and run the command the script prints once to copy the game files to your phone ([Quick reinstalls](../docs/development.md#quick-reinstalls)).
+Jogo grande demais para instalar? Compile de novo com `--romfs separate` e execute uma vez o comando que o script imprime para copiar os arquivos do jogo para o seu telefone ([Reinstalações rápidas](../docs/development.md#quick-reinstalls)).
 
-Controls, saves and settings: [Playing](../docs/playing.md).
+Controles, saves e configurações: [Jogando](../docs/playing.md).
 
-### Switch 2 games
+### Jogos de Switch 2
 
-A Switch 2 game is built from a folder of its files, not from NSPs, and needs no `prod.keys`. The script expects this folder (`updates` and `dlc` are optional):
+Um jogo de Switch 2 é compilado a partir de uma pasta com seus arquivos, não de NSPs, e não precisa de `prod.keys`. O script espera esta pasta (`updates` e `dlc` são opcionais):
 
 ```
 ~/Games/DonkeyKongBananza/
@@ -94,19 +94,19 @@ A Switch 2 game is built from a folder of its files, not from NSPs, and needs no
 python3 scripts/build_ipa_from_nsp.py ~/Games/DonkeyKongBananza --platform mac-app
 ```
 
-You get a Mac app, with no icon because the folder holds none. iPhone and iPad are untested.
+Você ganha um app para Mac, sem ícone porque a pasta não tem nenhum. iPhone e iPad não foram testados.
 
-## Games
+## Jogos
 
-Games tested on Mac or iPhone. See the [per-game notes](../dm/games/README.md#jogos) for tested platforms, progress and known issues:
+Jogos testados no Mac ou no iPhone. Veja as [notas por jogo](../dm/games/README.md#jogos) para plataformas testadas, progresso e problemas conhecidos:
 
-Needs iOS / iPadOS 26 or later on an iPhone 15 Pro or newer (A17 Pro chip or later) or an iPad with an M1 chip or later: the games' textures are BC-compressed, and older iPhones can't read that format. Other games aren't supported yet. For them the script writes a survey and still tries its best to pack an IPA, guessing the game's settings; such an IPA may not start.
+Requer iOS / iPadOS 26 ou mais recente em um iPhone 15 Pro ou mais novo (chip A17 Pro ou posterior) ou um iPad com chip M1 ou posterior: as texturas dos jogos são comprimidas em BC, e iPhones antigos não leem esse formato. Os outros jogos ainda não são suportados. Para eles o script escreve um survey e ainda tenta ao máximo fazer o pack de um IPA, deduzindo as configurações do jogo; um IPA assim pode não iniciar.
 
 
-### For developers
+### Para desenvolvedores
 
-[How it works](../docs/development.md) · [Game notes](../dm/games/README.md#jogos) · [Bring-up and debugging](../docs/agents/README.md) · [Front ends](../docs/frontends.md) · [Contributing](../CONTRIBUTING.md)
+[Como funciona](../docs/development.md) · [Notas por jogo](../dm/games/README.md#jogos) · [Bring-up e depuração](../docs/agents/README.md) · [Frontends](../docs/frontends.md) · [Contribuindo](../CONTRIBUTING.md)
 
-### License
+### Licença
 
-MIT ([LICENSE](../LICENSE)). Third-party code keeps its own license ([dm/third_party](../dm/third_party/README.md)); two parts are GPL-3.0-or-later, and so is what is built with them: the shader translator ([dm/third_party/ryujinx](../dm/third_party/ryujinx/README.md)) and Android's frame generation ([android/NOTICE.md](../android/NOTICE.md)).
+MIT ([LICENSE](../LICENSE)). O código de terceiros mantém a própria licença ([dm/third_party](../dm/third_party/README.md)); duas partes são GPL-3.0-or-later, e também é o que é construído com elas: o tradutor de shaders ([dm/third_party/ryujinx](../dm/third_party/ryujinx/README.md)) e a geração de frames do Android ([android/NOTICE.md](../android/NOTICE.md)).

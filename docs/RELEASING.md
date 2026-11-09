@@ -1,16 +1,13 @@
-# Releasing NativeAYN
+# Lançando o NativeAYN
 
-How the owner builds and signs a public release. The release key is the owner's alone: it is never in this repository, never in a pull request and never
-in CI. Nothing here creates it for you or chooses its passwords: you run the commands and type the passwords yourself.
+Como o dono compila e assina uma release pública. A chave de release pertence só ao dono: ela nunca fica neste repositório, nunca em um pull request e nunca no CI. Nada aqui a cria para você nem escolhe suas senhas: você mesmo executa os comandos e digita as senhas.
 
-The release APK is the release app (`-PnxLive=true`): app id `dev.nativeayn.android` (`-PnxAppId=dev.nativeayn.android`), named "NativeAYN", not debuggable, with the
-in-app updater on.
-By default it runs Ocarina of Time (`0400486024DEC000`) and has no on-phone packer (`-PnxPackEngine=fake`); `android/tools/release.sh` builds it.
+O APK de release é o app de release (`-PnxLive=true`): app id `dev.nativeayn.android` (`-PnxAppId=dev.nativeayn.android`), chamado "NativeAYN", não debugável, com o atualizador interno ativado.
+Por padrão ele executa Ocarina of Time (`0400486024DEC000`) e não tem packer no telefone (`-PnxPackEngine=fake`); `android/tools/release.sh` o compila.
 
-## 1. Create the release key (once)
+## 1. Criar a chave de release (uma vez)
 
-Pick a folder outside this repository, for example `~/keys/anka-native`, and run (it asks for the keystore password twice; for a PKCS12 keystore, the
-default, the key's password is the same as the store's):
+Escolha uma pasta fora deste repositório, por exemplo `~/keys/anka-native`, e execute (ela pede a senha do keystore duas vezes; em um keystore PKCS12, o padrão, a senha da chave é a mesma do store):
 
 ```sh
 mkdir -p ~/keys/anka-native && chmod 700 ~/keys/anka-native
@@ -20,28 +17,24 @@ keytool -genkeypair -v \
   -dname "CN=NativeAYN, O=NativeAYN"
 ```
 
-- `-validity 10950` is 30 years: Android wants a release key valid well past the app's life, and a key cannot be extended later.
-- The `-dname` names are public: anyone can read them from the APK. Leave out `-dname` and keytool asks for each field.
-- Use a long password and keep it in a password manager.
+- `-validity 10950` são 30 anos: o Android quer uma chave de release válida bem além da vida do app, e uma chave não pode ser estendida depois.
+- Os nomes do `-dname` são públicos: qualquer pessoa pode lê-los no APK. Sem `-dname`, o keytool pergunta campo por campo.
+- Use uma senha longa e guarde-a em um gerenciador de senhas.
 
-**Keep the keystore safe and backed up.** Android installs an update only when it is signed by the same key as the installed app: if the keystore or its
-password is lost, nobody can update the app any more, and every player has to uninstall it (losing its data folder) to install a new one. Keep at least two
-copies outside this repository (for example an encrypted USB stick and an encrypted cloud backup), never in a Git repository, a shared folder or a chat.
-`.gitignore` refuses `*.jks` and `*.keystore` files, and the Gradle build and `release.sh` refuse a keystore inside the repository.
+**Mantenha o keystore seguro e com backup.** O Android instala uma atualização apenas quando ela é assinada pela mesma chave do app instalado: se o keystore ou sua senha for perdido, ninguém mais consegue atualizar o app, e cada player precisa desinstalá-lo (perdendo sua pasta de dados) para instalar um novo. Guarde pelo menos duas cópias fora deste repositório (por exemplo um pendrive criptografado e um backup criptografado na nuvem), nunca em um repositório Git, pasta compartilhada ou chat. O `.gitignore` rejeita arquivos `*.jks` e `*.keystore`, e o build do Gradle e o `release.sh` recusam um keystore dentro do repositório.
 
-## 2. Tell the build where the key is
+## 2. Dizer ao build onde fica a chave
 
-The Gradle release build reads four settings from the environment, or else from your own `~/.gradle/gradle.properties` (never from the project's
-`gradle.properties` or a `-P` option):
+O build de release do Gradle lê quatro configurações do ambiente, ou então do seu próprio `~/.gradle/gradle.properties` (nunca do `gradle.properties` do projeto nem de uma opção `-P`):
 
-| Setting | Value |
+| Configuração | Valor |
 |---|---|
-| `ANKA_KEYSTORE` | the keystore's path, e.g. `$HOME/keys/anka-native/anka-native-release.jks` |
+| `ANKA_KEYSTORE` | o caminho do keystore, e.g. `$HOME/keys/anka-native/anka-native-release.jks` |
 | `ANKA_KEY_ALIAS` | `anka-native` |
-| `ANKA_KEYSTORE_PASSWORD` | the keystore's password |
-| `ANKA_KEY_PASSWORD` | the key's password (the store's when unset; the same for PKCS12) |
+| `ANKA_KEYSTORE_PASSWORD` | a senha do keystore |
+| `ANKA_KEY_PASSWORD` | a senha da chave (a do store quando não definida; a mesma no PKCS12) |
 
-For one shell session, typing the password without it going into the shell's history:
+Para uma sessão do shell, digitando a senha sem que ela entre no histórico do shell:
 
 ```sh
 export ANKA_KEYSTORE="$HOME/keys/anka-native/anka-native-release.jks"
@@ -50,54 +43,44 @@ read -rs -p 'Keystore password: ' ANKA_KEYSTORE_PASSWORD; echo
 export ANKA_KEYSTORE_PASSWORD ANKA_KEY_PASSWORD="$ANKA_KEYSTORE_PASSWORD"
 ```
 
-Or keep the path and alias (and, if you accept a password in a file, the passwords) in `~/.gradle/gradle.properties`, readable only by you
-(`chmod 600 ~/.gradle/gradle.properties`):
+Ou guarde o caminho e o alias (e, se você aceitar senha em arquivo, as senhas) em `~/.gradle/gradle.properties`, legível só por você (`chmod 600 ~/.gradle/gradle.properties`):
 
 ```properties
 ANKA_KEYSTORE=/home/<you>/keys/anka-native/anka-native-release.jks
 ANKA_KEY_ALIAS=anka-native
 ```
 
-## 3. Fill in the certificate (once, after the key exists)
+## 3. Preencher o certificado (uma vez, depois que a chave existir)
 
-The app ends its build tag with "official" only when its signing certificate is the one in `Signer.OFFICIAL`
-(`android/app/src/main/java/dev/nxnative/android/Signer.java`, the block marked THE RELEASE CERTIFICATE). Until it is filled in it is `NOT_SET`, and every
-build says "unofficial build". To fill it in:
+O app termina sua build tag com "official" apenas quando seu certificado de assinatura é o de `Signer.OFFICIAL` (`android/app/src/main/java/dev/nxnative/android/Signer.java`, o bloco marcado THE RELEASE CERTIFICATE). Até ser preenchido, ele é `NOT_SET`, e todo build diz "unofficial build". Para preenchê-lo:
 
 ```sh
 android/tools/release.sh --fingerprint     # prints 64 lower-case hex digits (keytool asks for the password unless ANKA_KEYSTORE_PASSWORD is set)
 ```
 
-Put them in place of `NOT_SET`, as `static final String OFFICIAL = "<the 64 hex digits>";`, then check and commit:
+Coloque-os no lugar de `NOT_SET`, como `static final String OFFICIAL = "<the 64 hex digits>";`, depois confira e faça commit:
 
 ```sh
 python3 -m unittest dm/tools/tests/test_android_signer.py
 git commit -am "Signer: the release certificate"
 ```
 
-The fingerprint is public data (anyone can read it from the APK); publish it in the release notes too, so players can check the APK they download
-(`apksigner verify --print-certs`).
+O fingerprint é dado público (qualquer pessoa pode lê-lo no APK); publique-o também nas notas da release, para que os players confiram o APK que baixam (`apksigner verify --print-certs`).
 
-## 4. Build the release
+## 4. Compilar a release
 
-From a clean checkout of the commit you release (`release.sh` refuses uncommitted changes, since the release's source is that commit):
+A partir de um checkout limpo do commit que você lança (`release.sh` recusa mudanças não commitadas, já que o código-fonte da release é aquele commit):
 
 ```sh
 android/tools/release.sh
 ```
 
-It builds with a JDK 21 (`JAVA_HOME`, by default `/usr/lib/jvm/java-21-openjdk`; Gradle fails with JDK 27), lets Gradle sign the APK with the release key,
-verifies it with `apksigner verify --print-certs` (one signer), prints the certificate's SHA-256 and stops when it is not `Signer.OFFICIAL`. The APK
-(`anka-native-<version>.apk`) and `SHA256SUMS.txt` go to `~/anka-native-releases/<version>/`, outside the repository.
+Ele compila com um JDK 21 (`JAVA_HOME`, por padrão `/usr/lib/jvm/java-21-openjdk`; o Gradle falha com JDK 27), deixa o Gradle assinar o APK com a chave de release, verifica com `apksigner verify --print-certs` (um signatário), imprime o SHA-256 do certificado e para quando não é o `Signer.OFFICIAL`. O APK (`anka-native-<version>.apk`) e o `SHA256SUMS.txt` vão para `~/anka-native-releases/<version>/`, fora do repositório.
 
-Options (environment): `ANKA_VERSION` (default `0.1.0`) and `ANKA_VERSION_CODE` (default `1`; raise it for every release, Android updates only to a higher
-code), `ANKA_GAMES` (default `0400486024DEC000`; several are comma-separated), `ANKA_PACK_ENGINE` (`native` by default, which needs the on-phone packer's stage in
-`NX_PACK_STAGE`, see [android/README.md](../android/README.md); `fake` builds without the packer, and the app then offers no Prepare), `ANKA_RELEASE_DIR` (another folder outside the repository).
+Opções (ambiente): `ANKA_VERSION` (padrão `0.1.0`) e `ANKA_VERSION_CODE` (padrão `1`; aumente-a em toda release, o Android só atualiza para um code maior), `ANKA_GAMES` (padrão `0400486024DEC000`; várias são separadas por vírgula), `ANKA_PACK_ENGINE` (`native` por padrão, que precisa do stage do packer no telefone em `NX_PACK_STAGE`, veja [android/README.md](../android/README.md); `fake` compila sem o packer, e o app então não oferece Prepare), `ANKA_RELEASE_DIR` (outra pasta fora do repositório).
 
-## 5. Publish
+## 5. Publicar
 
-1. Push the released commit (and its tag) to `github.com/renelima/NativeAYN` **before or together with** the APK: the APK is GPL-3.0-or-later as a whole,
-   so its complete source (this repository at the commit in the app's build tag) must be available to everyone who gets it ([NOTICE.md](../NOTICE.md)).
-2. Create a GitHub release (tag `v<version>`, marked as a pre-release) and upload only the APK and `SHA256SUMS.txt`. The in-app updater takes the
-   release's first `.apk` asset and checks it against GitHub's SHA-256 digest of it.
-3. Put the certificate's SHA-256 in the release notes.
+1. Dê push no commit lançado (e sua tag) para `github.com/renelima/NativeAYN` **antes ou junto com** o APK: o APK é GPL-3.0-or-later como um todo, então seu código-fonte completo (este repositório no commit da build tag do app) deve estar disponível para todos que o recebem ([NOTICE.md](../NOTICE.md)).
+2. Crie uma release no GitHub (tag `v<version>`, marcada como pre-release) e envie apenas o APK e o `SHA256SUMS.txt`. O atualizador interno pega o primeiro asset `.apk` da release e o confere contra o digest SHA-256 que o GitHub calcula dele.
+3. Coloque o SHA-256 do certificado nas notas da release.

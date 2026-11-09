@@ -1,42 +1,42 @@
-# Emulator frontends
+# Frontends de emulador
 
-NativeAYN starts a game for an emulator frontend (ES-DE, Daijisho, Beacon, Pegasus, or anything that runs `am start`). The frontend lists your `.nup` files ([NUP.md](NUP.md)) and sends the one you pick to the app. The app's component for this is:
+O NativeAYN inicia um jogo para um frontend de emulador (ES-DE, Daijisho, Beacon, Pegasus, ou qualquer coisa que rode `am start`). O frontend lista os seus arquivos `.nup` ([NUP.md](NUP.md)) e manda o que você escolher para o app. O componente do app para isso é:
 
 ```
 dev.ankanative.android/dev.ankanative.android.Launch
 ```
 
-`Launch` is an alias of `FrontendLaunch`, and its name follows the application ID, so the test app's is `dev.ankanative.android.test/dev.ankanative.android.test.Launch`. The alias, and `Open` for file managers, are the only exported parts of the app that start games.
+O `Launch` é um alias do `FrontendLaunch`, e o seu nome segue o ID da aplicação, então o do app de teste é `dev.ankanative.android.test/dev.ankanative.android.test.Launch`. O alias, e o `Open` para gerenciadores de arquivos, são as únicas partes exportadas do app que iniciam jogos.
 
-## What the app accepts
+## O que o app aceita
 
-| Form | Example |
+| Forma | Exemplo |
 |---|---|
-| `ACTION_VIEW` with a storage (SAF) URI of the file, from a folder picked in the frontend | `content://com.android.externalstorage.documents/tree/primary%3AROMs/document/primary%3AROMs%2Fgame.nup` |
-| `ACTION_VIEW` with a provider URI whose path carries the file's path (a FileProvider "root" path) | `content://<frontend>.fileprovider/root/storage/emulated/0/ROMs/game.nup` |
-| `ACTION_VIEW` with a `file://` URI | `file:///storage/emulated/0/ROMs/game.nup` |
-| The extra `game`: the file's path | `-e game /storage/emulated/0/ROMs/game.nup` |
-| The extra `title_id`: a game that is already on Home | `-e title_id 040074A01BF12000` |
+| `ACTION_VIEW` com um URI de armazenamento (SAF) do arquivo, de uma pasta escolhida no frontend | `content://com.android.externalstorage.documents/tree/primary%3AROMs/document/primary%3AROMs%2Fgame.nup` |
+| `ACTION_VIEW` com um URI de provider cujo caminho traz o caminho do arquivo (um caminho "root" de FileProvider) | `content://<frontend>.fileprovider/root/storage/emulated/0/ROMs/game.nup` |
+| `ACTION_VIEW` com um URI `file://` | `file:///storage/emulated/0/ROMs/game.nup` |
+| O extra `game`: o caminho do arquivo | `-e game /storage/emulated/0/ROMs/game.nup` |
+| O extra `title_id`: um jogo que já está na Home | `-e title_id 040074A01BF12000` |
 
-The extra `game` with the file's path is the most reliable form. The app opens games by path, so a URI is only turned back into a path (`PathUtil.documentToPath`, `Frontend.embeddedPath`). A provider URI that carries no path (Recent, a MediaStore number, a cloud file) is refused and the app says why. The `/sdcard` and `/storage/self/primary` aliases are the same files as `/storage/emulated/0` (`Frontend.normal`). A game folder works too, given by its path, but frontends list files, so `.nup` is the format for them. A frontend cannot choose the pack folder or the save folder: those extras are only adb's ([TESTING.md](TESTING.md)).
+O extra `game` com o caminho do arquivo é a forma mais confiável. O app abre jogos por caminho, então um URI é apenas convertido de volta num caminho (`PathUtil.documentToPath`, `Frontend.embeddedPath`). Um URI de provider que não traz caminho (Recent, um número do MediaStore, um arquivo na nuvem) é recusado e o app diz o porquê. Os aliases `/sdcard` e `/storage/self/primary` são os mesmos arquivos que `/storage/emulated/0` (`Frontend.normal`). Uma pasta de jogo também funciona, dada pelo seu caminho, mas os frontends listam arquivos, então o `.nup` é o formato para eles. Um frontend não pode escolher a pasta do pack nem a pasta do save: esses extras são só do adb ([TESTING.md](TESTING.md)).
 
-## What happens
+## O que acontece
 
-1. When the game's card is ready to play, the game starts at once and nothing of the launcher is shown. That means the game is on Home, or its pack is found beside it as Add game finds it, and the pack fits: this game build, finished code, this app's shader library, no save backup or restore running. A new file that is ready gets its card added first. When you stop the game (the in-game panel › Stop the game, or Back on a failed start), the frontend comes back.
-2. Anything that needs you opens Home with the game, as if you had tapped Play or picked it with Add game: no pack, Prepare, shaders to make or update, a pack that does not fit, All files access. After that, start it again from the frontend.
+1. Quando o card do jogo está pronto para jogar, o jogo inicia de uma vez e nada do launcher é mostrado. Isso significa que o jogo está na Home, ou que o pack dele é encontrado ao lado dele como o Adicionar jogo o encontra, e que o pack serve: esta build do jogo, código pronto, a biblioteca de shaders deste app, nenhum backup ou restauração de save em execução. Um arquivo novo que está pronto tem o seu card adicionado primeiro. Quando você parar o jogo (o painel dentro do jogo › Parar o jogo, ou Voltar numa inicialização que falhou), o frontend volta.
+2. Qualquer coisa que precise de você abre a Home com o jogo, como se você tivesse tocado em Jogar ou o tivesse escolhido com o Adicionar jogo: sem pack, Preparar, shaders a criar ou atualizar, um pack que não serve, Acesso a todos os arquivos. Depois disso, inicie-o de novo pelo frontend.
 
-All files access must be on (the app asks for it on Home).
+O Acesso a todos os arquivos tem que estar ligado (o app pede isso na Home).
 
-## In the frontend's own Switch list
+## Na própria lista de Switch do frontend
 
-A frontend needs no change of its own: each one lets you add an emulator by its component. Until a frontend ships NativeAYN in its bundled emulator list, you add it once, by hand:
+Um frontend não precisa de mudança nenhuma própria: cada um deixa você adicionar um emulador pelo componente dele. Até um frontend trazer o NativeAYN na sua lista de emuladores embutida, você o adiciona uma vez, à mão:
 
-- ES-DE: a system in `custom_systems/es_systems.xml` with the same `<name>` as a bundled one (`switch`) replaces that system. Copy the bundled `switch` entry from ES-DE's own `es_systems.xml`, add `.nup` to its `<extension>` and add the NativeAYN `<command>` lines below. Then NativeAYN is one of the alternative emulators of the Switch system.
-- Daijisho and Beacon: add a player to the existing Switch platform with the `am start` arguments below, and add `nup` to its extensions.
+- ES-DE: um sistema em `custom_systems/es_systems.xml` com o mesmo `<name>` que um embutido (`switch`) substitui esse sistema. Copie a entrada `switch` embutida do `es_systems.xml` do próprio ES-DE, adicione `.nup` ao `<extension>` dela e adicione as linhas `<command>` do NativeAYN abaixo. Então o NativeAYN passa a ser um dos emuladores alternativos do sistema Switch.
+- Daijisho e Beacon: adicione um player à plataforma Switch existente com os argumentos `am start` abaixo, e adicione `nup` às extensões dela.
 
 ## ES-DE
 
-ES-DE reads custom emulators from `ES-DE/custom_systems/es_find_rules.xml` and custom systems from `ES-DE/custom_systems/es_systems.xml`, in its application data folder. Add the emulator:
+O ES-DE lê emuladores customizados de `ES-DE/custom_systems/es_find_rules.xml` e sistemas customizados de `ES-DE/custom_systems/es_systems.xml`, na pasta de dados do aplicativo dele. Adicione o emulador:
 
 ```xml
 <?xml version="1.0"?>
@@ -49,7 +49,7 @@ ES-DE reads custom emulators from `ES-DE/custom_systems/es_find_rules.xml` and c
 </ruleList>
 ```
 
-Then add a system that lists `.nup` files and uses it. Change `path` to your ROM folder:
+Depois adicione um sistema que lista arquivos `.nup` e o usa. Mude o `path` para a sua pasta de ROM:
 
 ```xml
 <?xml version="1.0"?>
@@ -67,11 +67,11 @@ Then add a system that lists `.nup` files and uses it. Change `path` to your ROM
 </systemList>
 ```
 
-`%ROMSAF%` needs ES-DE's ROM folder to be picked through its storage access. If it is not, pick the "(path)" command in the system's alternative emulators.
+O `%ROMSAF%` precisa que a pasta de ROM do ES-DE seja escolhida através do acesso ao armazenamento dele. Se não for, escolha o comando "(path)" nos emuladores alternativos do sistema.
 
 ## Daijisho
 
-Daijisho has no screen for adding a player by hand. Its platforms are JSON files: the bundled ones come from its repository (`TapiocaFox/Daijishou`, `platforms/NintendoSwitch.json`), and it imports a platform file you give it. A Switch platform with NativeAYN in its player list is that file with these entries added at the top of `playerList` and `revisionNumber` raised by one:
+O Daijisho não tem tela para adicionar um player à mão. As plataformas dele são arquivos JSON: as embutidas vêm do repositório dele (`TapiocaFox/Daijishou`, `platforms/NintendoSwitch.json`), e ele importa um arquivo de plataforma que você der. Uma plataforma Switch com o NativeAYN na sua lista de players é esse arquivo com estas entradas adicionadas no topo da `playerList` e o `revisionNumber` aumentado em um:
 
 ```json
 {
@@ -86,36 +86,36 @@ Daijisho has no screen for adding a player by hand. Its platforms are JSON files
 }
 ```
 
-A second entry with `-a android.intent.action.VIEW\n -d {file.uri}` is the URI form, which is what Daijisho's other Switch players use. For the test app, use `dev.ankanative.android.test` in both places. Import the file in Daijisho (Settings › Library › import a platform), then pick the player on the Switch platform. Once Daijisho's repository has the entry, every Daijisho user gets it with no import.
+Uma segunda entrada com `-a android.intent.action.VIEW\n -d {file.uri}` é a forma de URI, que é a que os outros players de Switch do Daijisho usam. Para o app de teste, use `dev.ankanative.android.test` nos dois lugares. Importe o arquivo no Daijisho (Configurações › Biblioteca › importar uma plataforma), depois escolha o player na plataforma Switch. Quando o repositório do Daijisho tiver a entrada, todo usuário do Daijisho a recebe sem importar.
 
-## Beacon, Pegasus and others
+## Beacon, Pegasus e outros
 
-Any frontend that runs `am start` works with the same arguments. In Pegasus's `metadata.pegasus.txt`:
+Qualquer frontend que rode `am start` funciona com os mesmos argumentos. No `metadata.pegasus.txt` do Pegasus:
 
 ```
 launch: am start -n dev.ankanative.android/dev.ankanative.android.Launch -e game "{file.path}"
 ```
 
-From a computer, with the phone on adb:
+De um computador, com o celular no adb:
 
 ```bash
 adb shell am start -n dev.ankanative.android/dev.ankanative.android.Launch -e game /storage/emulated/0/ROMs/game.nup
 ```
 
-## Opening a .nup from a file manager
+## Abrindo um .nup por um gerenciador de arquivos
 
-A second alias, `<application ID>.Open`, shows the app in "Open with" for a file manager's `.nup`. That works when the file manager sends a path or a URI with one (see above).
+Um segundo alias, `<application ID>.Open`, mostra o app em "Abrir com" para um `.nup` de um gerenciador de arquivos. Isso funciona quando o gerenciador de arquivos manda um caminho ou um URI que traz um (veja acima).
 
-## When the frontend says "Unable to find explicit activity class"
+## Quando o frontend diz "Unable to find explicit activity class"
 
-On Android 15, an explicit intent reaches an exported component that has intent filters only when the intent matches one of them, and an intent with no action matches none (adb's shell is exempt, so adb tests do not show it). Daijisho met both: its `-d {file.uri}` player sends `VIEW` with no MIME type, and its `-e game {file.path}` player sends no action. So the `Launch` alias has no intent filters at all, and takes every form. The "Open with" filter for file managers is on a second alias, `<application ID>.Open` (2026-11-04). If a frontend still gets this message, the log shows what it sent: `adb logcat | grep -E "AmStart args|START u0"`.
+No Android 15, um intent explícito chega a um componente exportado que tem intent filters apenas quando o intent casa com um deles, e um intent sem action não casa com nenhum (o shell do adb é isento, então os testes com adb não mostram isso). O Daijisho encontrou ambos: o player `-d {file.uri}` dele manda `VIEW` sem tipo MIME, e o player `-e game {file.path}` dele não manda action. Então o alias `Launch` não tem intent filters nenhuns, e aceita todas as formas. O filter de "Abrir com" para gerenciadores de arquivos fica num segundo alias, `<application ID>.Open` (2026-11-04). Se um frontend ainda receber esta mensagem, o log mostra o que ele mandou: `adb logcat | grep -E "AmStart args|START u0"`.
 
-## Code
+## Código
 
-- `FrontendLaunch` (the alias's activity): reads the intent, checks the game as Play does (`ready`), then starts `GameActivity` with the extra `frontend`, or sends the game to Home (`MainActivity.fromFrontend`). It draws nothing (a translucent activity in a task of its own, not in Recents).
-- `Frontend`: the plain-Java part (URIs, paths, cards, title IDs), checked on the JVM by `dm/tools/tests/test_android_frontend.py` (`FrontendJvmTest`).
-- `GameActivity.backToFrontend`: when the game ends, the app's task goes behind the frontend instead of showing Home.
+- `FrontendLaunch` (a activity do alias): lê o intent, confere o jogo como o Jogar faz (`ready`), então inicia a `GameActivity` com o extra `frontend`, ou manda o jogo para a Home (`MainActivity.fromFrontend`). Ele não desenha nada (uma activity translúcida numa task própria, não nos Recentes).
+- `Frontend`: a parte em Java puro (URIs, caminhos, cards, title IDs), conferida na JVM pelo `dm/tools/tests/test_android_frontend.py` (`FrontendJvmTest`).
+- `GameActivity.backToFrontend`: quando o jogo termina, a task do app vai para trás do frontend em vez de mostrar a Home.
 
 ## Status
 
-- 2026-11-04, Honor phone, test app: over adb, the extra `game` (with `/sdcard`), `ACTION_VIEW` of a `file://` URI and of a SAF document URI, and the extra `title_id` each start the game straight away; a missing file shows its dialog. From Daijisho, on its Switch platform imported with the NativeAYN players, both players (`-e game {file.path}` and `-a VIEW -d {file.uri}`) start the game. ES-DE, Beacon and Pegasus are not tried.
+- 2026-11-04, celular Honor, app de teste: por adb, o extra `game` (com `/sdcard`), o `ACTION_VIEW` de um URI `file://` e de um URI de documento SAF, e o extra `title_id` iniciam o jogo direto cada um; um arquivo ausente mostra o diálogo dele. Do Daijisho, na plataforma Switch dele importada com os players do NativeAYN, ambos os players (`-e game {file.path}` e `-a VIEW -d {file.uri}`) iniciam o jogo. ES-DE, Beacon e Pegasus não foram tentados.

@@ -1,40 +1,40 @@
-# Settings
+# Configurações
 
-The screen before the game starts shows the settings the game supports. A setting that only matters while another is on appears under it and disappears when that one is turned off. Tap **Play** to start; the app remembers your choices for the next start. All settings are on one scrollable screen, under **Game**, **Controls** and **Performance**. Tap a menu or move a slider there; no settings page needs opening. **Upscaling** is in **Game**, beside **Console mode**. A Mac app shows the same settings in a [window of its own](#the-mac-settings-window).
+A tela antes do jogo começar mostra as configurações que o jogo suporta. Uma configuração que só importa enquanto outra está ligada aparece sob ela e desaparece quando aquela é desligada. Toque em **Play** para iniciar; o app lembra suas escolhas para a próxima inicialização. Todas as configurações ficam em uma única tela rolável, sob **Game**, **Controls** e **Performance**. Toque em um menu ou mova um slider ali; nenhuma página de configurações precisa ser aberta. **Upscaling** fica em **Game**, ao lado de **Console mode**. Um app para Mac mostra as mesmas configurações em uma [janela própria](#a-janela-de-configuracoes-no-mac).
 
-- [Tested defaults](#tested-defaults)
-- [Game](#game): [Frame rate](#frame-rate), [Render scale](#render-scale), [Console mode](#console-mode), [Upscaling](#upscaling), [Game language](#game-language), [Frame-rate counter](#frame-rate-counter)
-- [Controls](#controls): [Touch feedback](#touch-feedback), [Game rumble](#game-rumble), [Rumble strength](#rumble-strength), [Rumble cutoff](#rumble-cutoff)
-- [Performance](#performance): [Frame buffering](#frame-buffering), [Metal 4 pipelines](#metal-4-pipelines), [Pipeline prebuild](#pipeline-prebuild), [Encode thread](#encode-thread), [Hold frames when late](#hold-frames-when-late), [Performance HUD](#performance-hud), [Reset to tested defaults](#reset-to-tested-defaults)
-- [The Mac settings window](#the-mac-settings-window): [Display mode](#display-mode)
+- [Defaults testados](#defaults-testados)
+- [Jogo](#jogo): [Frame rate](#frame-rate), [Render scale](#render-scale), [Modo do console](#modo-do-console), [Upscaling](#upscaling), [Idioma do jogo](#idioma-do-jogo), [Contador de frame rate](#contador-de-frame-rate)
+- [Controles](#controles): [Feedback tátil](#feedback-tatil), [Rumble do jogo](#rumble-do-jogo), [Força do rumble](#forca-do-rumble), [Corte do rumble](#corte-do-rumble)
+- [Performance](#performance): [Buffering de frames](#buffering-de-frames), [Pipelines do Metal 4](#pipelines-do-metal-4), [Prebuild de pipelines](#prebuild-de-pipelines), [Thread de encode](#thread-de-encode), [Segurar frames quando atrasam](#segurar-frames-quando-atrasam), [HUD de performance](#hud-de-performance), [Restaurar os defaults testados](#restaurar-os-defaults-testados)
+- [A janela de configurações no Mac](#a-janela-de-configuracoes-no-mac): [Modo de exibição](#modo-de-exibicao)
 - [TV](#tv)
-- [Settings in a file](#settings-in-a-file)
+- [Configurações em arquivo](#configuracoes-em-arquivo)
 
-## Tested defaults
+## Defaults testados
 
-Each game comes with the settings it was tested with: its profile in this repository says, for example, that Breath of the Wild runs with Frame buffering and Metal 4 pipelines on, because that combination held a steady 60 fps on an iPhone 17 Pro Max. Those are the defaults the settings screen shows the first time.
+Cada jogo vem com as configurações com que foi testado: seu profile neste repositório diz, por exemplo, que Breath of the Wild roda com Frame buffering e Metal 4 pipelines ligados, porque essa combinação manteve 60 fps estáveis em um iPhone 17 Pro Max. Esses são os defaults que a tela de configurações mostra na primeira vez.
 
-When you change a setting and tap **Play**, the app keeps your choice, also when a later build of the app ships other defaults. A setting you leave at its default is not stored: it follows the defaults of the build you have, so a newer build's tested settings reach you without doing anything. **Reset to tested defaults** at the bottom sets every setting back to its default, and **Play** then forgets your choices, so the game's defaults apply again. For testing, a line in `Documents/env.txt` overrides any setting ([Settings in a file](#settings-in-a-file)).
+Quando você muda uma configuração e toca em **Play**, o app guarda sua escolha, inclusive quando um build posterior do app traz outros defaults. Uma configuração que você deixa em seu default não é guardada: ela segue os defaults do build que você tem, então as configurações testadas de um build mais novo chegam até você sem você fazer nada. **Reset to tested defaults**, no fim da tela, devolve toda configuração ao seu default, e **Play** então esquece suas escolhas, para que os defaults do jogo voltem a valer. Para testes, uma linha em `Documents/env.txt` sobrepõe qualquer configuração ([Configurações em arquivo](#configuracoes-em-arquivo)).
 
-A Mac app carries the same list (`Contents/Resources/dm/launcher.json`), without the iPhone's own Frame-rate counter and Touch feedback, for a front end that starts the app with the chosen values ([Front ends](frontends.md)).
+Um app para Mac carrega a mesma lista (`Contents/Resources/dm/launcher.json`), sem o Frame-rate counter e o Touch feedback próprios do iPhone, para um frontend que inicia o app com os valores escolhidos ([Frontends](frontends.md)).
 
-## Game
+## Jogo
 
 ### Frame rate
 
-Games whose speed the app controls (Breath of the Wild, Tears of the Kingdom and a few others) offer **30 fps** or **60 fps**. 60 is smoother; 30 is what the Switch ran and uses less power, so the phone stays cooler and the battery lasts longer. The game runs at real speed either way.
+Jogos cuja velocidade o app controla (Breath of the Wild, Tears of the Kingdom e alguns outros) oferecem **30 fps** ou **60 fps**. 60 é mais fluido; 30 é o que o Switch rodava e gasta menos energia, então o telefone esquenta menos e a bateria dura mais. O jogo roda em velocidade real dos dois modos.
 
 ### Render scale
 
-The size of the 3D picture, from 50 to 100 %. Below 100 % the size is fixed there and the game's own dynamic resolution is off; 100 % keeps the game's own. Lower can be lighter on the GPU but is blurrier; the HUD and text keep their sharpness. Only games the app can scale offer it.
+O tamanho da imagem 3D, de 50 a 100 %. Abaixo de 100 % o tamanho fica fixo ali e a resolução dinâmica própria do jogo é desligada; 100 % mantém a do próprio jogo. Menor pode pesar menos na GPU, mas fica mais borrado; o HUD e o texto mantêm a nitidez. Só jogos que o app consegue escalar oferecem isso.
 
-### Console mode
+### Modo do console
 
-**Docked** renders at the Switch's TV resolution, **Handheld** at its lower handheld resolution, which is lighter on the phone and can give a higher frame rate.
+**Docked** renderiza na resolução de TV do Switch, **Handheld** na resolução portátil, menor, que pesa menos no telefone e pode dar um frame rate maior.
 
 ### Upscaling
 
-A game that renders below the screen's resolution is scaled up to the screen. **Standard**, the default, scales smoothly; **MetalFX** uses Apple's MetalFX upscaler, which sharpens edges and text as it scales.
+Um jogo que renderiza abaixo da resolução da tela é escalado até a tela. **Standard**, o default, escala suavemente; **MetalFX** usa o upscaler MetalFX da Apple, que realça bordas e texto ao escalar.
 
 ```mermaid
 flowchart LR
@@ -45,45 +45,45 @@ flowchart LR
     M --> D
 ```
 
-Breath of the Wild renders 1280x720 in handheld mode. Docked it renders its world at 900p and scales that to 1080p itself, before the app sees the picture. MetalFX works in either mode: handheld saves the most GPU time and heat, docked looks sharper than smooth scaling. Rendering at the screen's resolution stays the sharpest picture, where the GPU can afford it.
+Breath of the Wild renderiza 1280x720 no modo portátil. No docked ele renderiza seu mundo em 900p e escala isso para 1080p por conta própria, antes de o app ver a imagem. O MetalFX funciona nos dois modos: no portátil economiza mais tempo de GPU e gera menos calor; no docked fica mais nítido que a escala suave. Renderizar na resolução da tela continua sendo a imagem mais nítida, onde a GPU suporta.
 
-- **When to change it:** turn it on if the picture looks soft and the device has GPU time to spare: on a Mac, or on an iPhone in handheld mode at 30 fps. For long sessions at 60 fps on an iPhone leave it at Standard.
-- **Cost:** more GPU time each frame, which can increase heat on an iPhone. Breath of the Wild's measurements cover Mac and iPhone; the matching iPhone Standard run and MetalFX's share of the thermal cost remain unmeasured. Nothing changes while the game's picture is as large as the screen. Unsupported devices and sizes use Standard scaling.
-- **On the Mac:** choose **MetalFX** under **Upscaling** in the [settings window](#the-mac-settings-window)'s Advanced settings, or set `DM_PRESENT_UPSCALE=metalfx` in its `env.txt` (off by default). It helps in a large window or on a 4K screen.
+- **Quando mudar:** ligue se a imagem parecer pouco nítida e o dispositivo tiver tempo de GPU sobrando: em um Mac, ou em um iPhone no modo portátil a 30 fps. Para sessões longas a 60 fps em um iPhone, deixe em Standard.
+- **Custo:** mais tempo de GPU a cada frame, o que pode aumentar o calor em um iPhone. As medições de Breath of the Wild cobrem Mac e iPhone; ainda não foram medidos o run de Standard correspondente no iPhone e a parcela do custo térmico que é do MetalFX. Nada muda enquanto a imagem do jogo tem o mesmo tamanho da tela. Dispositivos e tamanhos não suportados usam a escala Standard.
+- **No Mac:** escolha **MetalFX** em **Upscaling**, nos Advanced settings da [janela de configurações](#a-janela-de-configuracoes-no-mac), ou defina `DM_PRESENT_UPSCALE=metalfx` em seu `env.txt` (desligado por padrão). Ajuda em uma janela grande ou em uma tela 4K.
 
-### Game language
+### Idioma do jogo
 
-The game's own languages. The app was packed with one of them; pick another here without repacking.
+Os próprios idiomas do jogo. O app foi empacotado com um deles; escolha outro aqui sem reempacotar.
 
-### Frame-rate counter
+### Contador de frame rate
 
-Shows the frames per second at the top left.
+Mostra os frames por segundo no canto superior esquerdo.
 
-## Controls
+## Controles
 
-### Touch feedback
+### Feedback tátil
 
-A light tap from the phone when you press an on-screen button.
+Um toque leve do telefone quando você pressiona um botão na tela.
 
-### Game rumble
+### Rumble do jogo
 
-The game's vibration, on the phone or on a connected controller.
+A vibração do jogo, no telefone ou em um controle conectado.
 
-### Rumble strength
+### Força do rumble
 
-How strong the game's vibration is, from 0 to 300 %.
+A intensidade da vibração do jogo, de 0 a 300 %.
 
-### Rumble cutoff
+### Corte do rumble
 
-A controller's vibration weaker than this stays off, and the rest is spread over the full range. Off (0 %) by default. A controller with rotating motors can rumble all the time in a game that sends a quiet texture: Mario Kart 8 Deluxe needs about 45 % to rumble only on crashes and drifts. The phone's own vibration is not affected.
+Uma vibração de controle mais fraca que isto fica desligada, e o resto é espalhado por toda a faixa. Desligado (0 %) por padrão. Um controle com motores de rotação pode vibrar o tempo todo num jogo que envia uma vibração sutil: Mario Kart 8 Deluxe precisa de uns 45 % para vibrar só em batidas e drifts. A vibração do próprio telefone não é afetada.
 
 ## Performance
 
-These settings change how the app hands frames to the screen and how it prepares the GPU's work. The game's tested defaults are a good start; change them when a game stutters, runs hot, or you want less latency.
+Estas configurações mudam como o app entrega frames à tela e como ele prepara o trabalho da GPU. Os defaults testados do jogo são um bom ponto de partida; mude-os quando um jogo engasgar, rodar quente, ou quando você quiser menos latência.
 
-### Frame buffering
+### Buffering de frames
 
-Each finished frame is copied into a buffer of two images that the screen shows from, so the game can start its next frame at once instead of waiting for the screen to give its image back.
+Cada frame pronto é copiado para um buffer de duas imagens de que a tela mostra, então o jogo pode começar seu próximo frame de imediato em vez de esperar a tela devolver sua imagem.
 
 ```mermaid
 sequenceDiagram
@@ -104,14 +104,14 @@ sequenceDiagram
     Note over GPU: keeps working: frame 2 while frame 1 is on screen
 ```
 
-Without it the GPU idles between frames, and iOS reads that idle time as room to spare: it lowers the GPU's clock, and the frames take longer still. On an iPhone 17 Pro Max, Breath of the Wild fell to 30 fps without frame buffering and held 60 with it.
+Sem isso a GPU fica ociosa entre frames, e o iOS lê essa ociosidade como folga: ele reduz o clock da GPU, e os frames demoram ainda mais. Em um iPhone 17 Pro Max, Breath of the Wild caía para 30 fps sem frame buffering e mantinha 60 com ele.
 
-- **When to change it:** turn it off if you notice the controls lag behind and the game holds its frame rate without it.
-- **Cost:** up to one frame more latency between your input and the screen (about 28 ms more on an iPhone 17 Pro Max), and two more frame-sized images in memory.
+- **Quando mudar:** desligue se você notar o controle atrasando e o jogo mantiver seu frame rate sem ele.
+- **Custo:** até um frame a mais de latência entre seu input e a tela (uns 28 ms a mais em um iPhone 17 Pro Max), e duas imagens a mais do tamanho de um frame na memória.
 
-### Metal 4 pipelines
+### Pipelines do Metal 4
 
-Before the GPU can draw something, the app has to build a *pipeline* for it: the game's shaders compiled for the iPhone's GPU, with the drawing settings. Building one takes tens of milliseconds, so a scene full of new ones stutters. With Metal 4 pipelines the app keeps what it built in a pipeline archive on the phone, and builds most pipelines in a few microseconds from a shared base.
+Antes de a GPU poder desenhar algo, o app precisa construir uma *pipeline* para aquilo: os shaders do jogo compilados para a GPU do iPhone, com as configurações de desenho. Construir uma leva dezenas de milissegundos, então uma cena cheia de pipelines novas causa travadas. Com as pipelines do Metal 4 o app guarda o que construiu em um pipeline archive no telefone, e constrói a maioria das pipelines em poucos microssegundos a partir de uma base compartilhada.
 
 ```mermaid
 flowchart TD
@@ -131,29 +131,29 @@ flowchart TD
     archive -.->|next start| prepare
 ```
 
-At start, before the game's first frame, the app prepares what it already knows: the pipelines in the archive and those the prewarm lists name (one comes with the game, one grows on the phone as you play); with a warm archive that takes well under a second. A pipeline never seen before is drawn meanwhile with a stand-in for its pair of shaders, a *hybrid* pipeline that reads the draw's vertices in a general way and draws the same picture, while the real pipeline is built in the background and archived for the next start.
+Na inicialização, antes do primeiro frame do jogo, o app prepara o que já conhece: as pipelines do archive e as que as prewarm lists nomeiam (uma vem com o jogo, outra cresce no telefone conforme você joga); com um archive quente, isso leva bem menos de um segundo. Uma pipeline nunca vista é desenhada nesse meio-tempo com uma stand-in para seu par de shaders, uma pipeline *híbrida* que lê os vértices do draw de forma genérica e desenha a mesma imagem, enquanto a pipeline real é construída em background e arquivada para a próxima inicialização.
 
-- **When to change it:** turn it off only if a game crashes or runs out of memory with it.
-- **Cost:** memory for the archive while the game runs, and storage on the phone.
+- **Quando mudar:** desligue apenas se um jogo travar ou ficar sem memória com ele.
+- **Custo:** memória para o archive enquanto o jogo roda, e armazenamento no telefone.
 
-### Pipeline prebuild
+### Prebuild de pipelines
 
-Builds a stand-in for every pair of shaders the game has (15,767 for Breath of the Wild) and puts them into the pipeline archive, so that a scene you have never seen has a stand-in for each of its draws instead of a stutter. It runs before the game's first frame, behind a **Preparing pipelines** screen: the first start waits a few minutes for it, once, and so does the first start after a game update or an app update that brings new shaders. Every other start skips it. It needs Metal 4 pipelines, and its row shows only while that option is on.
+Constrói uma stand-in para cada par de shaders que o jogo tem (15.767 em Breath of the Wild) e as coloca no pipeline archive, para que uma cena que você nunca viu tenha uma stand-in para cada um de seus draws em vez de uma travada. Ele roda antes do primeiro frame do jogo, atrás de uma tela **Preparing pipelines**: a primeira inicialização espera alguns minutos por ele, uma vez, e o mesmo vale para a primeira inicialização depois de uma atualização do jogo ou do app que traga shaders novos. Toda outra inicialização o pula. Ele precisa das pipelines do Metal 4, e sua linha só aparece enquanto aquela opção está ligada.
 
-Built in the background while playing instead, the stand-ins took an iPhone 17 Pro Max's GPU from about 13 to 15–18 ms a frame in Breath of the Wild, so the app does the work up front.
+Construídas em background durante o jogo, as stand-ins levaram a GPU de um iPhone 17 Pro Max de cerca de 13 para 15–18 ms por frame em Breath of the Wild, então o app faz esse trabalho adiantado.
 
-- **When to change it:** turn it off if you don't want to wait at that first start.
-- **Cost:** on, a wait of a few minutes once. Off, no wait, but a pipeline seen for the first time makes the game stall briefly while it is built, until the archive holds it.
+- **Quando mudar:** desligue se você não quiser esperar naquela primeira inicialização.
+- **Custo:** ligado, uma espera de alguns minutos, uma vez. Desligado, sem espera, mas uma pipeline vista pela primeira vez faz o jogo parar um pouco enquanto ela é construída, até o archive guardá-la.
 
-### Encode thread
+### Thread de encode
 
-The app turns the game's graphics commands into Metal commands on a thread of its own instead of the game's submitting thread, so the game's thread can go on sooner (in Breath of the Wild about 4 ms per frame instead of 8). Frame buffering needs it for games that present their frames from another thread than the one that draws them. It is on by default on the iPhone; on the Mac it is off, where it lowered the typical frame time but made the slowest frames slower.
+O app converte os comandos gráficos do jogo em comandos Metal em uma thread própria, em vez da thread de submissão do jogo, para que a thread do jogo possa continuar mais cedo (em Breath of the Wild cerca de 4 ms por frame em vez de 8). O frame buffering precisa dela para jogos que apresentam seus frames por uma thread diferente da que os desenha. Ela é ligada por padrão no iPhone; no Mac é desligada, onde reduziu o tempo típico de frame, mas deixou os frames mais lentos ainda mais lentos.
 
-- **When to change it:** leave it on unless a game misbehaves with it; turning it off is a diagnostic step.
+- **Quando mudar:** deixe ligada a menos que um jogo se comporte mal com ela; desligá-la é um passo de diagnóstico.
 
-### Hold frames when late
+### Segurar frames quando atrasam
 
-For games whose frame rate the app controls ([Frame rate](#frame-rate)). With 60 fps chosen, each frame is meant to stay on screen for one refresh. When a frame comes late, the app can either slow the game down to 30 fps for a while, or keep 60 and show late frames as they come.
+Para jogos cujo frame rate o app controla ([Frame rate](#frame-rate)). Com 60 fps escolhidos, cada frame deve ficar na tela por um refresh. Quando um frame chega atrasado, o app pode desacelerar o jogo para 30 fps por um tempo, ou manter 60 e mostrar os frames atrasados conforme chegam.
 
 ```mermaid
 flowchart LR
@@ -169,71 +169,71 @@ flowchart LR
     end
 ```
 
-- **On** (the default for most games): an even 30 fps (or 20) in heavy scenes instead of a mix of 30 and 60.
-- **Off:** the game keeps aiming at 60; a late frame is shown one refresh later and the next one goes on as usual, so heavy scenes look less even but stay closer to 60 on average.
-- **When to change it:** turn it off if the game often falls to 30 fps although it is only slightly late.
+- **Ligado** (o default da maioria dos jogos): 30 fps (ou 20) redondos em cenas pesadas, em vez de uma mistura de 30 e 60.
+- **Desligado:** o jogo continua mirando nos 60; um frame atrasado é mostrado um refresh depois e o próximo segue normalmente, então as cenas pesadas parecem menos uniformes, mas ficam mais perto de 60 em média.
+- **Quando mudar:** desligue se o jogo cair muitas vezes para 30 fps embora esteja só levemente atrasado.
 
-### Performance HUD
+### HUD de performance
 
-Apple's performance overlay over the game: frame rate, frame and GPU times, memory. Useful to see what a setting changes; leave it off for play.
+O overlay de performance da Apple sobre o jogo: frame rate, tempos de frame e de GPU, memória. Útil para ver o que uma configuração muda; deixe desligado para jogar.
 
-### Reset to tested defaults
+### Restaurar os defaults testados
 
-Sets every setting back to the game's tested default; **Play** then forgets your choices, so those defaults apply, and those of later builds too ([Tested defaults](#tested-defaults)). Settings fixed by `Documents/env.txt` stay as the file says.
+Devolve toda configuração ao default testado do jogo; **Play** então esquece suas escolhas, para que esses defaults valham, e também os de builds posteriores ([Defaults testados](#defaults-testados)). Configurações fixadas por `Documents/env.txt` continuam como o arquivo diz.
 
-## The Mac settings window
+## A janela de configurações no Mac
 
-A Mac app ([A Mac app](development.md#a-mac-app)) shows its settings in a window before the game starts. They are the same settings as on the iPhone, with the same defaults. The window shows the most used ones first: **Frame rate**, **Render scale**, **Console mode**, **Game language**, **Display mode** and **Game rumble**, when the game has them. **Render scale** shows the picture's size in pixels beside the percentage for the chosen **Console mode**, when the game's profile has it (Breath of the Wild: 1600 × 900 docked, 1280 × 720 handheld at 100 %). The others are under **Advanced settings**, in the usual sections, with **Reset to tested defaults**. The window remembers whether Advanced settings is open. **Frame-rate counter** and **Touch feedback** are only on the iPhone.
+Um app para Mac ([Um app para Mac](development.md#a-mac-app)) mostra suas configurações em uma janela antes do jogo começar. São as mesmas configurações que no iPhone, com os mesmos defaults. A janela mostra primeiro as mais usadas: **Frame rate**, **Render scale**, **Console mode**, **Game language**, **Display mode** e **Game rumble**, quando o jogo as tem. **Render scale** mostra o tamanho da imagem em pixels ao lado da porcentagem para o **Console mode** escolhido, quando o profile do jogo tem isso (Breath of the Wild: 1600 × 900 docked, 1280 × 720 handheld a 100 %). As demais ficam sob **Advanced settings**, nas seções habituais, com **Reset to tested defaults**. A janela lembra se os Advanced settings estão abertos. **Frame-rate counter** e **Touch feedback** só existem no iPhone.
 
-Click **Play** (or press Return) to start the game. **Quit**, ⌘Q or closing the window ends the app without the game. The app remembers your choices for that game, and a game started without the window, from a front end or with the window turned off, uses them too ([Saved choices](frontends.md#saved-choices)). A setting fixed by an `env.txt` or by the program that started the app is shown greyed out.
+Clique em **Play** (ou aperte Return) para iniciar o jogo. **Quit**, ⌘Q ou fechar a janela encerra o app sem o jogo. O app lembra suas escolhas para aquele jogo, e um jogo iniciado sem a janela, por um frontend ou com a janela desligada, também as usa ([Escolhas salvas](frontends.md#escolhas-salvas)). Uma configuração fixada por um `env.txt` ou pelo programa que iniciou o app é mostrada acinzentada.
 
-Turn off **Show this window at launch** to start the game at once with your choices. Hold Option while the app opens to see the window again. `DM_LAUNCHER=0` in the app's `env.txt` (`~/Library/Application Support/nxnative/<title ID>/env.txt`) or in its environment, or opening it with `open <app> --args --no-launcher`, also skips the window; your choices still apply. `DM_SAVED_CHOICES=0` starts with the tested defaults instead.
+Desligue **Show this window at launch** para iniciar o jogo de imediato com suas escolhas. Segure Option enquanto o app abre para ver a janela de novo. `DM_LAUNCHER=0` no `env.txt` do app (`~/Library/Application Support/nxnative/<title ID>/env.txt`) ou em seu ambiente, ou abri-lo com `open <app> --args --no-launcher`, também pula a janela; suas escolhas continuam valendo. `DM_SAVED_CHOICES=0` inicia com os defaults testados em vez disso.
 
-### Display mode
+### Modo de exibição
 
-**Window** or **Fullscreen**: how the game's window opens. ⌃⌘F or the green button changes it while you play. In an `env.txt`: `DM_FULLSCREEN=1` or `0`.
+**Window** ou **Fullscreen**: como a janela do jogo abre. ⌃⌘F ou o botão verde mudam isso durante o jogo. Em um `env.txt`: `DM_FULLSCREEN=1` ou `0`.
 
-### Cloud saves folder
+### Pasta dos cloud saves
 
-**Choose a folder…** picks the iCloud Drive folder the game's save is synced through, the one the iPhone app chose in its launcher's **Cloud saves**, or the game's own folder inside it, named after its title ID ([Cloud saves](#cloud-saves)); **Turn off** stops it. Off by default. macOS may ask once whether the app may open iCloud Drive; if the game log says `this app may not open iCloud Drive`, allow it in System Settings › Privacy & Security › Files and Folders. In an `env.txt`: `DM_SAVE_SYNC=<folder>`, or `DM_SAVE_SYNC=icloud` for iCloud Drive › nxnative Saves; the window then shows it fixed.
+**Choose a folder…** escolhe a pasta do iCloud Drive pela qual o save do jogo é sincronizado, a que o app de iPhone escolheu no **Cloud saves** do seu launcher, ou a pasta própria do jogo dentro dela, nomeada pelo seu title ID ([Saves na nuvem](#saves-na-nuvem)); **Turn off** para encerrar. Desligado por padrão. O macOS pode perguntar uma vez se o app pode abrir o iCloud Drive; se o log do jogo disser `this app may not open iCloud Drive`, permita em System Settings › Privacy & Security › Files and Folders. Em um `env.txt`: `DM_SAVE_SYNC=<pasta>`, ou `DM_SAVE_SYNC=icloud` para iCloud Drive › nxnative Saves; a janela então o mostra como fixo.
 
-## Cloud saves
+## Saves na nuvem
 
-The Mac app and the iPhone app of one game can share a save through iCloud Drive. Choose the same iCloud Drive folder on both: **Cloud saves** › **Choose a folder…** in the Mac settings window, and **Cloud saves** in the iPhone launcher (any folder, for instance one named **nxnative Saves**). Each game keeps one file there, `<title ID>/save.dmsync`, which holds the whole save.
+O app de Mac e o app de iPhone de um mesmo jogo podem compartilhar um save pelo iCloud Drive. Escolha a mesma pasta do iCloud Drive nos dois: **Cloud saves** › **Choose a folder…** na janela de configurações do Mac, e **Cloud saves** no launcher do iPhone (qualquer pasta, por exemplo uma chamada **nxnative Saves**). Cada jogo guarda ali um arquivo, `<title ID>/save.dmsync`, que contém o save inteiro.
 
-When the game starts, it brings the save from iCloud Drive in if that one is the one to keep; a few seconds after the game saves, it sends its save. The iPhone app also sends when it goes to the background, and the Mac app once the game has quit. If you played on both without the save getting across in between, the newer save wins.
+Quando o jogo inicia, ele traz o save do iCloud Drive se aquele for o que deve ficar; alguns segundos depois de o jogo salvar, ele envia seu save. O app de iPhone também envia quando vai para segundo plano, e o app de Mac quando o jogo fecha. Se você jogou nos dois sem o save ter passado de um para o outro no meio, o save mais novo vence.
 
-A save that is replaced, on the device or in iCloud Drive, is kept first, beside the save in a folder named after it with `-backups` (on the iPhone `save-backups` in the Files app, under the app's name; on the Mac `~/Library/Application Support/nxnative/<title ID>/save-backups`): `<date> local` holds this device's save, `<date> cloud` the one that was in iCloud Drive. The newest 10 of each kind stay, and older ones are removed; other folders you put there are left alone.
+Um save que é substituído, no dispositivo ou no iCloud Drive, é guardado primeiro, ao lado do save em uma pasta nomeada com `-backups` (no iPhone, `save-backups` no app Arquivos, sob o nome do app; no Mac, `~/Library/Application Support/nxnative/<title ID>/save-backups`): `<date> local` guarda o save deste dispositivo, `<date> cloud` o que estava no iCloud Drive. Os 10 mais novos de cada tipo ficam, e os mais antigos são removidos; outras pastas que você colocar ali são deixadas em paz.
 
-iCloud Drive takes a moment to carry a file from one device to the other. Quit the game on one device and give it a few seconds before you start it on the other. Without a connection the game plays on with the save it has and sends it later. The game log says what came in and what went out (lines starting with `save sync:`).
+O iCloud Drive leva um momento para levar um arquivo de um dispositivo ao outro. Feche o jogo em um dispositivo e dê alguns segundos antes de iniciá-lo no outro. Sem conexão, o jogo segue com o save que tem e o envia depois. O log do jogo diz o que entrou e o que saiu (linhas começando com `save sync:`).
 
 ## TV
 
-Connect a TV or monitor by cable, or start Screen Mirroring to an Apple TV or AirPlay TV. The game fills it in 16:9 at up to 1080p and switches to **Docked**; the iPhone or iPad keeps the controls. Disconnect to bring the game back to the device in its earlier mode. AirPlay adds some delay; a cable has almost none.
+Conecte uma TV ou monitor por cabo, ou inicie o Screen Mirroring para uma Apple TV ou TV com AirPlay. O jogo a preenche em 16:9 a até 1080p e muda para **Docked**; o iPhone ou iPad mantém os controles. Desconecte para devolver o jogo ao dispositivo, no modo anterior. O AirPlay adiciona algum atraso; um cabo quase nenhum.
 
-## Settings in a file
+## Configurações em arquivo
 
-A line like `DM_PRESENT_SNAP=0` in `Documents/env.txt` (in the Files app, under the app's name) sets a setting from the file: the settings screen shows it greyed out, and the file wins over your choice and the game's default. Fully close and reopen the app after editing the file. The variables:
+Uma linha como `DM_PRESENT_SNAP=0` em `Documents/env.txt` (no app Arquivos, sob o nome do app) define uma configuração a partir do arquivo: a tela de configurações a mostra acinzentada, e o arquivo vence sua escolha e o default do jogo. Feche o app por completo e abra-o de novo depois de editar o arquivo. As variáveis:
 
-| Setting | Variable | Values |
+| Configuração | Variável | Valores |
 |---|---|---|
 | Frame rate | `DM_FPS_TARGET` | `30`, `60` |
-| Render scale | `DM_RENDER_SCALE` | `0.5` to `1.0` |
-| Console mode | `DM_OPMODE` | `1` docked, `0` handheld |
-| Game language | `DM_LANG` | a language code, such as `ja` |
-| Display mode (Mac) | `DM_FULLSCREEN` | `1` fullscreen, `0` a window |
-| Cloud saves folder (Mac) | `DM_SAVE_SYNC` | a folder; `icloud`: iCloud Drive › nxnative Saves; `0`: off |
-| Frame-rate counter | `DM_SHOW_FPS` | `1`, `0` |
-| Touch feedback | `DM_TOUCH_HAPTICS` | `1`, `0` |
-| Game rumble | `DM_RUMBLE` | `1`, `0` |
-| Rumble strength | `DM_RUMBLE_GAIN` | `0` to `3` |
-| Rumble cutoff | `DM_RUMBLE_MIN` | `0` to `0.9` |
+| Render scale | `DM_RENDER_SCALE` | `0.5` a `1.0` |
+| Modo do console | `DM_OPMODE` | `1` docked, `0` handheld |
+| Idioma do jogo | `DM_LANG` | um código de idioma, como `ja` |
+| Modo de exibição (Mac) | `DM_FULLSCREEN` | `1` fullscreen, `0` janela |
+| Pasta dos cloud saves (Mac) | `DM_SAVE_SYNC` | uma pasta; `icloud`: iCloud Drive › nxnative Saves; `0`: desligado |
+| Contador de frame rate | `DM_SHOW_FPS` | `1`, `0` |
+| Feedback tátil | `DM_TOUCH_HAPTICS` | `1`, `0` |
+| Rumble do jogo | `DM_RUMBLE` | `1`, `0` |
+| Força do rumble | `DM_RUMBLE_GAIN` | `0` a `3` |
+| Corte do rumble | `DM_RUMBLE_MIN` | `0` a `0.9` |
 | Upscaling | `DM_PRESENT_UPSCALE` | `off`, `metalfx` |
-| Frame buffering | `DM_PRESENT_SNAP` | `1`, `0` |
-| Metal 4 pipelines | `DM_PSO_MTL4` | `1`, `0` |
-| Pipeline prebuild | `DM_PSO_PREBUILD` | `1`, `0` |
-| Encode thread | `DM_NVN_ENC_THREAD` | `1`, `0` |
-| Hold frames when late | `DM_FPS_HOLD` | `on`, `off` |
-| Performance HUD | `DM_METAL_HUD` | `1`, `0` |
+| Buffering de frames | `DM_PRESENT_SNAP` | `1`, `0` |
+| Pipelines do Metal 4 | `DM_PSO_MTL4` | `1`, `0` |
+| Prebuild de pipelines | `DM_PSO_PREBUILD` | `1`, `0` |
+| Thread de encode | `DM_NVN_ENC_THREAD` | `1`, `0` |
+| Segurar frames quando atrasam | `DM_FPS_HOLD` | `on`, `off` |
+| HUD de performance | `DM_METAL_HUD` | `1`, `0` |
 
-`DM_LAUNCHER=0` skips the settings screen; the choices you saved there still apply. `DM_SAVED_CHOICES=0` starts with the tested defaults and keeps your saved choices for later. How the settings are listed for each game: [dm/games/settings.tsv](../dm/games/settings.tsv).
+`DM_LAUNCHER=0` pula a tela de configurações; as escolhas que você salvou ali continuam valendo. `DM_SAVED_CHOICES=0` inicia com os defaults testados e guarda suas escolhas salvas para depois. Como as configurações são listadas para cada jogo: [dm/games/settings.tsv](../dm/games/settings.tsv).
