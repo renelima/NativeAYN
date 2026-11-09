@@ -2141,6 +2141,7 @@ static int link_wait(const win_t *o, uint64_t timeout_ns) {
     }
     return mtl_link_wait_tick(present_itv(o), timeout_ns);
 }
+__attribute__((weak)) uint64_t mtl_present_period_fit(uint64_t period_ns) { return period_ns; }   // the replay's genlock (vka_present.c): fits the period to whole panel refreshes; identity without it
 static uint64_t present_period(const win_t *o) {
     present_cfg(o);
     int was = atomic_load(&g_game_itv), want = o->interval > 0 ? o->interval : 1;
@@ -2150,7 +2151,7 @@ static uint64_t present_period(const win_t *o) {
         else if (was < 2) atomic_store(&g_itv2_since, now_ns() | 1);   // | 1: the start is never 0
     }
     int itv = present_itv(o), hz = g_hz;
-    return hz > 0 ? (uint64_t)itv * 1000000000ull / (uint64_t)hz : 0;
+    return hz > 0 ? mtl_present_period_fit((uint64_t)itv * 1000000000ull / (uint64_t)hz) : 0;
 }
 // The period the acquire thread declares to the scheduler (set_time_constraint): the present period, except that a hold the frame step raised for late frames keeps the cap's deadline.
 // Declaring the longer hold let the performance controller move the game to the efficiency cores at half the clock (TOTK on an iPhone: 3.4 → 1.5 GHz and 65% → 5% on performance

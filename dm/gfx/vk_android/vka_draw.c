@@ -11,6 +11,7 @@
 #include "vka_selftest_spv.h"
 #include "vka_pidx.h"
 #include "vka_rprof.h"
+#include "vka_ndsr.h"           // vka_ndsr_pipeline (vka_dispatch), vka_ndsr_mode
 #include <math.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -1779,9 +1780,9 @@ static int ndve_net(uint64_t key) {   // a network or last-pass key the direct p
 }
 static const uint64_t k_ndsr = 0xd99fbeeb53d38847ull;   // agl's NDSR upscaler network (DM_VK_NDSR_STANDIN, below)
 static int ndsr_standin_on(void) { return VKA_ENV("DM_VK_NDSR_STANDIN", 0) != 0; }
-// A compute key whose dispatches the replay replaces (the NDVE network, the NDSR network under DM_VK_NDSR_STANDIN): its pipeline is not made ahead (vka_pso.c pw_main), so its
+// A compute key whose dispatches the replay replaces (the NDVE network, the NDSR network under DM_VK_NDSR_STANDIN or DM_VK_NDSR): its pipeline is not made ahead (vka_pso.c pw_main), so its
 // private memory never sizes Turnip's per-fiber buffer. One that still runs (the switch turned off live, a dispatch the replacement refuses) is made at its dispatch
-int vka_ndve_replaced(uint64_t key) { return ndve_net(key) || (key == k_ndsr && ndsr_standin_on()); }
+int vka_ndve_replaced(uint64_t key) { return ndve_net(key) || (key == k_ndsr && (ndsr_standin_on() || vka_ndsr_mode())); }
 // The one storage image a compute shader writes (from the walk), 0 when it has none or several
 static int cs_image_tid(uint8_t *dim) {
     int tid = 0, n = 0;
@@ -1961,10 +1962,14 @@ void vka_dispatch(vka_dstate *d, const p_dispatch *dp) {
         else if (after && ndve_net(key)) { g_ndve.skipped++; g_dispatches++; return; }
         else if (ndve_net(key)) VRED_ONCE("NDVE movie: network shader %016llx dispatched with no colour conversion before it: it runs as recorded (its pipeline is made)", (unsigned long long)key);
     }
-    // agl's NDSR network replaced by its bilinear term (DM_VK_NDSR_STANDIN)
-    if (sh[5]->key == k_ndsr && ndsr_standin_on() && ndsr_standin(d, sh, dp)) { g_dispatches++; return; }
+    // agl's NDSR network replaced by its bilinear term (the old DM_VK_NDSR_STANDIN switch; the ported DM_VK_NDSR=bilinear replaces it below when set)
+    if (sh[5]->key == k_ndsr && ndsr_standin_on() && !vka_ndsr_mode() && ndsr_standin(d, sh, dp)) { g_dispatches++; return; }
     vka_layout lay; if (!vka_layout_of(sh, 1, &lay)) SKIP("dispatch skipped: no pipeline layout");
-    VkPipeline p = vka_cs_pipeline(sh[5], &lay);
+    walk_all(d, sh);   // (before the pipeline: vka_ndsr_pipeline needs this dispatch's bound input and output; bind_sets reads the same walk below)
+    // agl's NDSR network replaced by FSR 1 EASU or its bilinear term (DM_VK_NDSR, vka_ndsr.c): the module takes the network's layout and binding numbers, so
+    // bind_sets writes the same descriptors and the dispatch keeps its slot and group count. NULL: the network's own pipeline
+    VkPipeline p = vka_ndsr_pipeline(d, sh[5], &lay, g_wk.r[5], g_wk.n[5], g_cb);
+    if (!p) p = vka_cs_pipeline(sh[5], &lay);
     if (vka_nan_on()) vka_tex_watch_dispatch(sh[5]->key);
     if (!p) { g_skipped++; return; }
     d->b.dispatch[0] = (uint32_t)dp->x; d->b.dispatch[1] = (uint32_t)dp->y; d->b.dispatch[2] = (uint32_t)dp->z; d->b.nvn2 = (uint32_t)vka_nvn2();
@@ -1990,8 +1995,7 @@ void vka_dispatch(vka_dstate *d, const p_dispatch *dp) {
         if (dp->ind) VRED_ONCE("indirect dispatch of a program with its shared memory in the spill buffer (%016llx): its %llu slices are shared by workgroups that many apart", (unsigned long long)sh[5]->key, (unsigned long long)ns);
     }
     c0_at c0 = {0};
-    walk_all(d, sh);
-    { uint64_t tp_ = VKA_RP_T0(); int ps = pool_scan(d, sh); if (ps) vka_tex_pool_write(g_cb, ps == 2); VKA_RP_ADD(VKA_RPX_POOLSCAN, tp_); }   // (no pass is open at a dispatch)
+    { uint64_t tp_ = VKA_RP_T0(); int ps = pool_scan(d, sh); if (ps) vka_tex_pool_write(g_cb, ps == 2); VKA_RP_ADD(VKA_RPX_POOLSCAN, tp_); }   // (no pass is open at a dispatch; the walk above is this dispatch's)
     if (!bind_sets(d, sh, &lay, VK_PIPELINE_BIND_POINT_COMPUTE, &c0)) { g_skipped++; return; }
     if (dp->ind && c0.buf) {   // the group counts the GPU wrote, into c0's dispatch words before the dispatch reads them (nvn_mtl.m g_c0_dim_buf); NVN2 reads them at c0 + 4 too
         VkBufferCopy c[2] = {{io, c0.off + DMSH_C0_DISPATCH, 12}, {io, c0.off + DMSH_C0_DISPATCH_NVN2, 12}};

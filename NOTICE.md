@@ -19,6 +19,9 @@ O NativeAYN dá continuidade ao port para Android do nxnative: os projetos em qu
 
 - **Ryujinx** (MIT): o tradutor de shaders (`Ryujinx.Graphics.Shader`, `Ryujinx.Common`, `Spv.Generator` 1.3.2) em `dm/third_party/ryujinx`, com
   alterações locais listadas no seu README.
+- **[Swap2-Native](https://github.com/mamcjr/Swap2-Native)**, de mamcjr (MIT), fork do Banana Native: de lá vêm, citados no código e nos docs, a substituição
+  da rede de upscaler NDSR do agl pelo FSR 1 EASU no replay Vulkan (`dm/gfx/vk_android/vka_ndsr.c`, `fsr/ndsr_easu.comp`, `DM_VK_NDSR`) e a ferramenta de
+  resolução de cena `dm/tools/gsys_dynres.py` (medidas do fork: 30.2-30.9 para 37.8-38.4 fps em Ocarina of Time, celular).
 - **[Eglantine](https://github.com/djihads80/eglantine)** via **[switch2mac](https://github.com/azmasm/switch2mac)**, de azmasm: o lowering de task /
   mesh shader do Switch 2 (`InstEmitAmpereMesh.cs`, GPL-3.0-or-later); os entry points de mesh em SPIR-V do switch2mac (MIT fora de `nx2_lower`).
 - **[kartnative](https://github.com/pahorema/kartnative)**, de pahorema (MIT): descobertas sobre texturas esparsas escritas pela GPU e o header por

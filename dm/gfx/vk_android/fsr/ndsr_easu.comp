@@ -1,0 +1,89 @@
+#version 450
+#extension GL_GOOGLE_include_directive : require
+// FSR 1 EASU in place of agl's NDSR upscaler network (agl_ndsr*.pck; Zelda: Ocarina of Time's fa3033d05c0a41d6) on the Vulkan replay, DM_VK_NDSR=fsr
+// (vka_ndsr.c). It takes the network's own descriptors: the network's input (a combined 2D sampler) and its output (a 2D storage image), and agl's push
+// bank c24 (read only with MAP = 1). Bindings 100 / 101 / 102 are placeholders: vka_ndsr.c ndsr_words rewrites them to the entry's own binding numbers,
+// so this one module serves every network of that interface. The game's dispatch (its group count) is kept: each invocation walks the output with a grid
+// stride over gl_NumWorkGroups, so any group count covers the image. Sizes come from the bound images (textureSize / imageSize), so any scene size works.
+// Specialization constants: ENC 0 = the input holds the colour, 1 = it holds sqrt(colour) (agl's light upscaler: a335c1db6270c355 packs sqrt as RGB9E5),
+// and the output is the colour (max(c, 0) squared); MAP 0 = the whole input onto the whole output, 1 = agl's push bank (experimental, see main);
+// KERNEL 0 = EASU, 1 = bilinear (from four texel fetches, so the game's sampler filter does not matter).
+// PACKED (a compile-time variant, ndsr_spv.py): the output is an R32_UINT view of the network's image and each texel is stored as its format's 32-bit word, for an
+// output format without storage support (B10G11R11_UFLOAT on Adreno: a float store into it has no view to go through). PACK (constant_id 3) names that format:
+// 1 = B10G11R11_UFLOAT (R in bits 0-10, G 11-21, B 22-31: 5-bit exponents, 6 / 6 / 5-bit mantissas, no sign), 2 = R8G8B8A8_UNORM.
+layout(local_size_x = 128, local_size_y = 1, local_size_z = 1) in;
+layout(constant_id = 0) const int ENC = 0;
+layout(constant_id = 1) const int MAP = 0;
+layout(constant_id = 2) const int KERNEL = 0;
+layout(constant_id = 3) const int PACK = 1;
+layout(set = 0, binding = 100) uniform sampler2D src;
+#if PACKED
+layout(set = 0, binding = 101, r32ui) uniform writeonly uimage2D dst;
+#else
+layout(set = 0, binding = 101) uniform writeonly image2D dst;
+#endif
+layout(set = 0, binding = 102, std140) uniform Bank { uvec4 c[16]; } bank;   // DMSH_PUSH_SIZE (0x100) bytes: agl's c24
+#define A_GPU 1
+#define A_GLSL 1
+#include "ffx_a.h"
+#define FSR_EASU_F 1
+// EASU gathers 2x2 footprints around p; the footprint is kept inside the image (texel centres 0.5 .. size - 0.5), so the result does not depend on the
+// game sampler's address mode at the border (a clamp-to-edge sampler gives the same picture away from the outermost texel)
+AF2 g_lo, g_hi;
+AF4 FsrEasuRF(AF2 p) { return textureGather(src, clamp(p, g_lo, g_hi), 0); }
+AF4 FsrEasuGF(AF2 p) { return textureGather(src, clamp(p, g_lo, g_hi), 1); }
+AF4 FsrEasuBF(AF2 p) { return textureGather(src, clamp(p, g_lo, g_hi), 2); }
+#include "ffx_fsr1.h"
+vec3 fetch(ivec2 t, ivec2 isz) { return texelFetch(src, clamp(t, ivec2(0), isz - 1), 0).rgb; }
+// Bilinear at input pixel position pp (texel centres at integers), from texel fetches
+vec3 bilinear(vec2 pp, ivec2 isz) {
+    vec2 f = floor(pp), w = pp - f; ivec2 i = ivec2(f);
+    vec3 a = mix(fetch(i, isz), fetch(i + ivec2(1, 0), isz), w.x), b = mix(fetch(i + ivec2(0, 1), isz), fetch(i + ivec2(1, 1), isz), w.x);
+    return mix(a, b, w.y);
+}
+// An unsigned small float of v >= 0 from its half: the half's exponent and top mantissa bits (drop = 10 - mantissa bits), rounded to nearest; mx = the format's
+// largest finite value, so no rounding reaches infinity
+uint ufloat(float v, uint drop, float mx) { uint h = packHalf2x16(vec2(min(v, mx), 0.0)) & 0x7fffu; return (h + (1u << (drop - 1u))) >> drop; }
+void store(ivec2 p, vec3 c) {
+#if PACKED
+    uint w = PACK == 2 ? packUnorm4x8(vec4(c, 1.0)) : ufloat(c.r, 4u, 65024.0) | ufloat(c.g, 4u, 65024.0) << 11 | ufloat(c.b, 5u, 64512.0) << 22;
+    imageStore(dst, p, uvec4(w));
+#else
+    imageStore(dst, p, vec4(c, 1.0));
+#endif
+}
+void main() {
+    ivec2 isz = textureSize(src, 0), osz = imageSize(dst);
+    if (isz.x <= 0 || isz.y <= 0 || osz.x <= 0 || osz.y <= 0) return;
+    g_lo = AF2(1.0) / AF2(isz); g_hi = AF2(1.0) - g_lo;
+    // con0: input pixel (texel centres at integers) = output pixel * con0.xy + con0.zw (EASU's con0)
+    AU4 c0, c1, c2, c3;
+    FsrEasuCon(c0, c1, c2, c3, AF1(isz.x), AF1(isz.y), AF1(isz.x), AF1(isz.y), AF1(osz.x), AF1(osz.y));
+    ivec2 org = ivec2(0), reg = osz;
+    if (MAP == 1) {
+        // agl's push bank (decoded from the network's disassembly, not yet from logged values: vka_ndsr.c DM_VK_NDSR_LOG): c24[1].xy = the output origin (integers),
+        // c24[5] = the source mapping, source = (output pixel + 0.5) * c24[5].xy + c24[5].zw. Units: input pixels; a scale under 1/64 is read as normalized
+        // coordinates (multiplied by the input size)
+        vec4 m = uintBitsToFloat(bank.c[5]);
+        org = clamp(ivec2(bank.c[1].xy), ivec2(0), osz); reg = osz - org;
+        if (abs(m.x) < 1.0 / 64.0 && abs(m.y) < 1.0 / 64.0) m *= vec4(isz, isz);
+        vec2 s = m.xy, o = 0.5 * m.xy + m.zw - 0.5;
+        c0 = AU4(floatBitsToUint(s.x), floatBitsToUint(s.y), floatBitsToUint(o.x), floatBitsToUint(o.y));
+    }
+    vec4 k0 = uintBitsToFloat(c0);
+    // 1:1 (a scene at the output's size): a decode only
+    bool same = all(equal(isz, osz)) && (MAP == 0 || (abs(k0.x - 1.0) < 1e-5 && abs(k0.y - 1.0) < 1e-5 && abs(k0.z) < 1e-3 && abs(k0.w) < 1e-3));
+    uint groups = gl_NumWorkGroups.x * gl_NumWorkGroups.y * gl_NumWorkGroups.z;
+    uint g = (gl_WorkGroupID.z * gl_NumWorkGroups.y + gl_WorkGroupID.y) * gl_NumWorkGroups.x + gl_WorkGroupID.x;
+    uint stride = groups * 128u, n = uint(reg.x) * uint(reg.y);
+    for (uint p = g * 128u + gl_LocalInvocationID.x; p < n; p += stride) {
+        ivec2 q = ivec2(int(p % uint(reg.x)), int(p / uint(reg.x)));
+        AF3 c;
+        if (same) c = fetch(q, isz);
+        else if (KERNEL == 1) c = bilinear(vec2(q) * k0.xy + k0.zw, isz);
+        else FsrEasuF(c, AU2(q), c0, c1, c2, c3);
+        c = max(c, AF3(0.0));
+        if (ENC == 1) c *= c;
+        store(q + org, c);
+    }
+}

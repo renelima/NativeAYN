@@ -54,6 +54,7 @@ static VkImage g_simg[MAXIMG]; static VkSemaphore g_sdone[MAXIMG]; static uint32
 static struct { VkCommandBuffer cb; VkFence fence; VkSemaphore acq; vka_img *held; int used; } g_fr[NFRAME];
 static VkCommandPool g_ppool; static unsigned g_fi;
 static uint64_t g_refresh_ns, g_last_desired, g_drawable_ns;
+static _Atomic uint64_t g_refresh_pub;   // g_refresh_ns for other threads (mtl_present_period_fit, the game's present period, hle_nvn.c)
 static int g_recreate;
 static struct { uint64_t n; double t; } g_pres[PRING];
 static VkSurfaceTransformFlagBitsKHR g_pre = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;   // the swapchain's preTransform
@@ -384,7 +385,7 @@ static int swap_create(void) {
     }
     g_refresh_ns = 0;
     if (V.display_timing && vk.vkGetRefreshCycleDurationGOOGLE) { VkRefreshCycleDurationGOOGLE rc; if (!vk.vkGetRefreshCycleDurationGOOGLE(V.dev, sw, &rc)) g_refresh_ns = rc.refreshDuration; }
-    g_last_desired = 0; g_recreate = 0;
+    g_last_desired = 0; g_recreate = 0; atomic_store_explicit(&g_refresh_pub, g_refresh_ns, memory_order_relaxed);
     g_refresh_n = 0;
     VLOG("swapchain %ux%u, %u images, format %d, FIFO, transform %#x (surface %#x%s), refresh %.2f Hz%s", ext.width, ext.height, g_nimg, pick.format, pre, caps.currentTransform,
          rot_rotates(pre) ? ": pre-rotated" : rot_rotates(caps.currentTransform) ? ": the compositor rotates" : "", g_refresh_ns ? 1e9 / g_refresh_ns : 0.0,
@@ -470,8 +471,42 @@ static void refresh_poll(void) {
         uint64_t a = rc.refreshDuration, b = g_refresh_ns, d = a > b ? a - b : b - a;
         if (b && d * 100 < b) g_refresh_ns = a;
         else { VLOG("display refresh %.2f Hz", 1e9 / rc.refreshDuration); g_refresh_ns = rc.refreshDuration; g_last_desired = 0; }
+        atomic_store_explicit(&g_refresh_pub, g_refresh_ns, memory_order_relaxed);
     }
     if (g_refresh_n > 300) g_refresh_n = 0;   // settled
+}
+// Genlock (DM_VK_GENLOCK, default 1, live; 0 = the game's nominal period; ported from Swap2-Native): a present period within 1 % of a whole number k of the panel's
+// refresh periods becomes exactly k refreshes, both where the game is paced (hle_nvn.c present_period, through mtl_present_period_fit) and in the chain of desired
+// present times below. The game's period is counted in 1/60 s ticks, the panel's is what display timing measures (60.22-60.24 Hz on the Honor and POCO phones): at
+// 30 fps the chain asked for 33.333 ms against two refreshes of 16.603 ms, gained 0.127 ms a frame on the panel's grid and crossed the half-refresh margin about
+// every 130 frames (~4.4 s), where one frame stayed three refreshes; at 60 fps FIFO showed a frame twice about as often. Fitting only one of the two periods would
+// not do: the game would produce slower or faster than the chain takes frames, and the chain would restart from "now". A frame-counted game runs as much faster in
+// wall time (0.4 % at 60.23 Hz), as on a panel of that rate
+static uint64_t genlock(uint64_t period, uint64_t refresh, uint64_t *k_out) {
+    if (k_out) *k_out = 0;
+    if (!period || !refresh || !VKA_ENV("DM_VK_GENLOCK", 1)) return period;
+    uint64_t k = (period + refresh / 2) / refresh;
+    if (!k) return period;
+    uint64_t fit = k * refresh, d = fit > period ? fit - period : period - fit;
+    if (d * 100 >= period) return period;
+    if (k_out) *k_out = k;
+    return fit;
+}
+uint64_t mtl_present_period_fit(uint64_t period_ns) {   // the game's present period (hle_nvn.c; any thread)
+    uint64_t k, r = atomic_load_explicit(&g_refresh_pub, memory_order_relaxed), fit = genlock(period_ns, r, &k);
+    // A line when it engages or changes (the k, or the refresh by more than 1 %: the driver's estimate drifts by 0.01-0.02 Hz): the first 8, then the 16th, 32nd, ... (a game
+    // whose interval switches 1 <-> 2 every few seconds changes k as often)
+    static _Atomic uint64_t lk, lr, nl; uint64_t ok = atomic_load_explicit(&lk, memory_order_relaxed), orr = atomic_load_explicit(&lr, memory_order_relaxed);
+    if ((k != ok || (k && (r > orr ? r - orr : orr - r) * 100 > orr)) && atomic_compare_exchange_strong(&lk, &ok, k)) {
+        atomic_store_explicit(&lr, r, memory_order_relaxed);
+        uint64_t c = atomic_fetch_add(&nl, 1) + 1;
+        if (c <= 8 || !(c & (c - 1))) {
+            if (k) VLOG("genlock: present period %.3f ms -> %.3f ms, %llu refreshes of %.2f Hz (change %llu; DM_VK_GENLOCK=0: the nominal period)", period_ns / 1e6, fit / 1e6,
+                        (unsigned long long)k, 1e9 / r, (unsigned long long)c);
+            else VLOG("genlock: present period %.3f ms kept (%s; change %llu)", period_ns / 1e6, r ? "not within 1 % of whole refreshes, or DM_VK_GENLOCK=0" : "the refresh is not known", (unsigned long long)c);
+        }
+    }
+    return fit;
 }
 static int present_one(const pq_item *it) {
     if (!g_surf || vka_hung()) return 0;
@@ -547,7 +582,7 @@ static int present_one(const pq_item *it) {
                        .commandBufferCount = 1, .pCommandBuffers = &cb, .signalSemaphoreCount = 1, .pSignalSemaphores = &g_sdone[idx]};
     if (!it->fence) ti.waitSemaphoreValueCount = 1;
     frame_rate(it->period); refresh_poll();
-    uint64_t want = 0, period = (uint64_t)((it->hold > 0 ? it->hold : it->period) * 1e9);
+    uint64_t want = 0, period = genlock((uint64_t)((it->hold > 0 ? it->hold : it->period) * 1e9), g_refresh_ns, NULL);
     if (g_refresh_ns && period > g_refresh_ns * 3 / 2) {   // hold each image for its present period: the panel refreshes faster than the game presents
         uint64_t now = now_ns(); want = g_last_desired ? g_last_desired + period : now;
         if (want < now) want = now;
