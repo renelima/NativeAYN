@@ -1,69 +1,76 @@
-# NativeAYN: credits and licenses
+# NativeAYN: créditos e licenças
 
-NativeAYN is built on other people's work. This file is where they are credited; their copyrights and licenses are kept.
-NativeAYN is based on the Anka Native project by EddizEge.
+O NativeAYN é construído sobre o trabalho de outras pessoas. Este arquivo é onde elas recebem crédito; seus copyrights e licenças são mantidos.
+O NativeAYN é baseado no projeto Anka Native, de renelima.
 
-## The projects it is built on
+## Os projetos nos quais se baseia
 
-- **[nxnative](https://github.com/seedds/nxnative)** by seedds (MIT). The host that runs a Switch game's own ARM64 code natively, the NSO rewriter, the
-  game profiles, the shader tools and the Mac / iPhone builds all come from it. Its MIT license and copyright line are kept in [LICENSE](LICENSE). Later
-  upstream fixes ported into NativeAYN name the nxnative commit they come from in the code and in the docs (for example the Ocarina of Time frame step,
-  `7d8dcdf8`, and the 8-byte record step of `shader_split.py`, `b1d7c707`).
-- **[Banana Native](https://github.com/moceure/BananaNative)** by moceure (MIT, with the GPL parts named below), including the work in the Raphix91 fork:
-  the Android port of nxnative that NativeAYN continues: the Android launcher (`android/app`), the Vulkan replay of NVN (`dm/gfx/vk_android`), the
-  on-phone packer, frame generation on Android, the custom GPU driver loader and the Donkey Kong Bananza and Mario Kart World work on Android. Its own
-  notice is kept in [android/NOTICE.md](android/NOTICE.md).
-- **[d2r-mobile](https://github.com/jhaizhou-ops/d2r-mobile)** (MIT): the native-execution approach nxnative started from.
+- **[nxnative](https://github.com/seedds/nxnative)**, de seedds (MIT). O host que executa nativamente o próprio código ARM64 de um jogo do Switch, o
+  rewriter de NSO, os profiles de jogo, as ferramentas de shader e os builds de Mac / iPhone vêm todos dele. Sua licença MIT e sua linha de copyright estão
+  mantidas em [LICENSE](LICENSE). Correções upstream posteriores portadas para o NativeAYN citam, no código e nos docs, o commit do nxnative de onde vêm
+  (por exemplo, o frame step de Ocarina of Time, `7d8dcdf8`, e o record step de 8 bytes do `shader_split.py`, `b1d7c707`).
+- **[Banana Native](https://github.com/moceure/BananaNative)**, de moceure (MIT, com as partes GPL citadas abaixo), incluindo o trabalho no fork Raphix91:
+  o port para Android do nxnative que o NativeAYN dá continuidade: o launcher de Android (`android/app`), o replay Vulkan de NVN (`dm/gfx/vk_android`), o
+  packer no celular, a geração de frames no Android, o carregador de driver de GPU customizado e os trabalhos de Donkey Kong Bananza e Mario Kart World no
+  Android. Seu próprio aviso é mantido em [android/NOTICE.md](android/NOTICE.md).
+- **[d2r-mobile](https://github.com/jhaizhou-ops/d2r-mobile)** (MIT): a abordagem de execução nativa da qual o nxnative partiu.
 
-## Code and findings from other projects
+## Código e descobertas de outros projetos
 
-- **Ryujinx** (MIT): the shader translator (`Ryujinx.Graphics.Shader`, `Ryujinx.Common`, `Spv.Generator` 1.3.2) in `dm/third_party/ryujinx`, with local
-  changes listed in its README.
-- **[Eglantine](https://github.com/djihads80/eglantine)** via **[switch2mac](https://github.com/azmasm/switch2mac)** by azmasm: the Switch 2 task / mesh
-  shader lowering (`InstEmitAmpereMesh.cs`, GPL-3.0-or-later); switch2mac's SPIR-V mesh entry points (MIT outside `nx2_lower`).
-- **[kartnative](https://github.com/pahorema/kartnative)** by pahorema (MIT): findings for GPU-written sparse textures and the mesh programs'
-  per-primitive header (followed without copying code).
-- **[Eden](https://git.eden-emu.dev/eden-emu/eden)** and **[lsfg-vk](https://github.com/PancakeTAS/lsfg-vk)**: Lossless Scaling frame generation, ported
-  to C in `dm/gfx/vk_android/lsfg` (GPL-3.0-or-later). `Lossless.dll` itself belongs to Lossless Scaling, is sold separately and is never included.
-- **[libadrenotools](https://github.com/bylaws/libadrenotools)** (with liblinkernsbypass), as kept in Eden: loading a custom Adreno GPU driver.
-- **Mesa's Turnip** Vulkan driver (MIT): the open Adreno driver the phone runs the games on. It is not in this repository or in the APK; the user installs a
-  driver build, such as the Anka Turnip build or the community builds the launcher's Download... lists (each keeps its own license; Qualcomm's own driver
-  binaries are proprietary).
-- **Lichii** (Android emulator): Ocarina of Time findings. The game's 4-byte cut at `main+0x805bd0` uses the same offset and bytes as Lichii's built-in
-  patch, and the frame-rate division the frame step replaces was found there first (as nxnative credits). Ideas only: no Lichii code is in this repository.
-- **[Atmosphere](https://github.com/Atmosphere-NX/Atmosphere)** (the reference for Horizon's synchronization), **[LibHac](https://github.com/Thealexbarney/LibHac)**,
+- **Ryujinx** (MIT): o tradutor de shaders (`Ryujinx.Graphics.Shader`, `Ryujinx.Common`, `Spv.Generator` 1.3.2) em `dm/third_party/ryujinx`, com
+  alterações locais listadas no seu README.
+- **[Eglantine](https://github.com/djihads80/eglantine)** via **[switch2mac](https://github.com/azmasm/switch2mac)**, de azmasm: o lowering de task /
+  mesh shader do Switch 2 (`InstEmitAmpereMesh.cs`, GPL-3.0-or-later); os entry points de mesh em SPIR-V do switch2mac (MIT fora de `nx2_lower`).
+- **[kartnative](https://github.com/pahorema/kartnative)**, de pahorema (MIT): descobertas sobre texturas esparsas escritas pela GPU e o header por
+  primitiva dos programas de mesh (seguidas sem copiar código).
+- **[Eden](https://git.eden-emu.dev/eden-emu/eden)** e **[lsfg-vk](https://github.com/PancakeTAS/lsfg-vk)**: geração de frames do Lossless Scaling,
+  portada para C em `dm/gfx/vk_android/lsfg` (GPL-3.0-or-later). O próprio `Lossless.dll` pertence ao Lossless Scaling, é vendido separadamente e nunca é
+  incluído.
+- **[libadrenotools](https://github.com/bylaws/libadrenotools)** (com liblinkernsbypass), como mantido no Eden: carregamento de um driver de GPU Adreno
+  customizado.
+- **O driver Vulkan Turnip da Mesa** (MIT): o driver Adreno aberto no qual o celular roda os jogos. Ele não está neste repositório nem no APK; o usuário
+  instala um build de driver, como o build Anka Turnip ou os builds da comunidade que a lista Download... do launcher mostra (cada um mantém sua própria
+  licença; os binários do driver da própria Qualcomm são proprietários).
+- **Lichii** (emulador para Android): descobertas de Ocarina of Time. O cut de 4 bytes do jogo em `main+0x805bd0` usa o mesmo offset e os mesmos bytes do
+  patch embutido do Lichii, e a divisão de frame rate que o frame step substitui foi encontrada lá primeiro (como o nxnative credita). Apenas ideias: nenhum
+  código do Lichii está neste repositório.
+- **[Atmosphere](https://github.com/Atmosphere-NX/Atmosphere)** (a referência para a sincronização do Horizon), **[LibHac](https://github.com/Thealexbarney/LibHac)**,
   **[SPIRV-Cross](https://github.com/KhronosGroup/SPIRV-Cross)**, **[glslang](https://github.com/KhronosGroup/glslang)**,
-  **[MacNativeGames](https://github.com/ly05010419/MacNativeGames)** (MIT) and deko3d (zlib): used by the Mac and iPhone builds and the shared tools, as
-  listed in [docs/mac-and-iphone.md](docs/mac-and-iphone.md#acknowledgements).
-- Third-party code shipped in `dm/third_party` (AMD FidelityFX FSR 1, NVIDIA FLIP, libadrenotools, libvpx, stb_vorbis, Ryujinx, Vulkan-Headers, zstd and
-  MacNativeGames' adapted parts): each keeps its license file in its own directory, listed in [dm/third_party/README.md](dm/third_party/README.md).
-- Prebuilt tools committed for the Mac shader chain: `dm/gfx/tools/spirv_cross_bin/spirv-cross` (SPIRV-Cross, Apache-2.0, license texts beside it) and
-  the translator `dm/gfx/tools/dmsh_xlate_bin` (a GPL-3.0-or-later combined work, see above). The translator folder also carries the .NET packages it
-  was built with, unmodified from NuGet: Gommon 2.8.1.2 (MIT), Humanizer 3.0.10 with its language resources (MIT), MsgPack.Cli 1.0.1 (Apache-2.0),
-  Microsoft.IO.RecyclableMemoryStream 3.0.1 (MIT) and System.CodeDom 4.4.0 (MIT, .NET Foundation); each package's license is in its NuGet package.
-  Beside it, `dmsh_xlate-<linux|win>-<x64|arm64>` are .NET's application hosts (MIT) that start the same translator on Linux and Windows.
+  **[MacNativeGames](https://github.com/ly05010419/MacNativeGames)** (MIT) e deko3d (zlib): usados pelos builds de Mac e iPhone e pelas ferramentas
+  compartilhadas, como listado em [docs/mac-and-iphone.md](docs/mac-and-iphone.md#agradecimentos).
+- Código de terceiros incluído em `dm/third_party` (AMD FidelityFX FSR 1, NVIDIA FLIP, libadrenotools, libvpx, stb_vorbis, Ryujinx, Vulkan-Headers, zstd e
+  as partes adaptadas do MacNativeGames): cada um mantém seu arquivo de licença em seu próprio diretório, listado em
+  [dm/third_party/README.md](dm/third_party/README.md).
+- Ferramentas precompiladas commitadas para a shader chain de Mac: `dm/gfx/tools/spirv_cross_bin/spirv-cross` (SPIRV-Cross, Apache-2.0, textos de licença
+  ao lado dele) e o tradutor `dm/gfx/tools/dmsh_xlate_bin` (um trabalho combinado GPL-3.0-or-later, veja acima). A pasta do tradutor também traz os
+  pacotes .NET com os quais foi compilado, inalterados vindos do NuGet: Gommon 2.8.1.2 (MIT), Humanizer 3.0.10 com seus recursos de idioma (MIT),
+  MsgPack.Cli 1.0.1 (Apache-2.0), Microsoft.IO.RecyclableMemoryStream 3.0.1 (MIT) e System.CodeDom 4.4.0 (MIT, .NET Foundation); a licença de cada pacote
+  está no seu pacote NuGet. Ao lado, `dmsh_xlate-<linux|win>-<x64|arm64>` são hosts de aplicação do .NET (MIT) que iniciam o mesmo tradutor em Linux e
+  Windows.
 
-- The **on-phone packer** in the APK (`android/ondevice/build.sh` builds it, unmodified from each project's release): **[CPython](https://www.python.org)**
-  3.14.6 for Android (PSF License), **[Capstone](https://github.com/capstone-engine/capstone)** 5.0.7 (BSD-3-Clause),
-  **[python-lz4](https://github.com/python-lz4/python-lz4)** 4.4.5 with LZ4 (BSD-3-Clause, BSD-2-Clause),
-  **[zbic](https://github.com/kinnay/zbic)** 1.0.1.post1 by Yannik Marchand (GPLv2; it carries Zstandard, BSD-3-Clause or GPLv2) for the
-  zstd-compressed code of newer games, **[SPIRV-Tools](https://github.com/KhronosGroup/SPIRV-Tools)** (Apache-2.0) and the
-  **[.NET](https://github.com/dotnet/runtime)** runtime the translator is compiled with (NativeAOT, MIT).
+- O **packer no celular** do APK (`android/ondevice/build.sh` o compila, inalterado a partir da release de cada projeto): **[CPython](https://www.python.org)**
+  3.14.6 para Android (PSF License), **[Capstone](https://github.com/capstone-engine/capstone)** 5.0.7 (BSD-3-Clause),
+  **[python-lz4](https://github.com/python-lz4/python-lz4)** 4.4.5 com LZ4 (BSD-3-Clause, BSD-2-Clause),
+  **[zbic](https://github.com/kinnay/zbic)** 1.0.1.post1, de Yannik Marchand (GPLv2; ele traz o Zstandard, BSD-3-Clause ou GPLv2), para o código
+  comprimido em zstd dos jogos mais recentes, **[SPIRV-Tools](https://github.com/KhronosGroup/SPIRV-Tools)** (Apache-2.0) e o runtime do
+  **[.NET](https://github.com/dotnet/runtime)** com o qual o tradutor é compilado (NativeAOT, MIT).
 
-## Licenses
+## Licenças
 
-- The repository's own code is MIT ([LICENSE](LICENSE): seedds' copyright and EddizEge's), except the files marked GPL-3.0-or-later: the frame
-  generation port (`dm/gfx/vk_android/lsfg`), the shader translator's `InstEmitAmpereMesh.cs` and the Anka mark's script (`android/tools/anka_logo.py`).
-- **The Android app is GPL-3.0-or-later as a whole.** The APK links the frame generation port (`dm/gfx/vk_android/lsfg`, GPL-3.0-or-later) unless built
-  with `-PnxLsfg=false`, and an APK that carries the on-phone packer also carries the GPL shader translator. Whoever passes such an APK on must offer its
-  complete source: this repository at the commit in the app's build tag. Details: [android/NOTICE.md](android/NOTICE.md).
-- The Anka mark (the phoenix) is EddizEge's own design, the same mark as the Anka emulator's. Its script `android/tools/anka_logo.py` is
-  Copyright 2026 EddizEge, GPL-3.0-or-later, as in the Anka project (the license text: [dm/gfx/vk_android/lsfg/COPYING](dm/gfx/vk_android/lsfg/COPYING)).
-  The icons it makes (`android/images/logo.png` and the `anka_*.png` and `ic_launcher*.png` files under `android/app/src/main/res`) are EddizEge's
-  artwork and are licensed GPL-3.0-or-later too. `android/tools/anka_icons.py`, which writes them from the script, is MIT.
-- The game profiles (`dm/games/<title ID>`) kept in this repository are Ocarina of Time (`0400486024DEC000`), Donkey Kong Bananza (`040074A01BF12000`) and
-  Mario Kart World (`0400C3F00006E000`); nxnative's profiles of other games are not carried over.
-- Nothing from any game is in this repository or in the app: no game code, no game data, no keys, no firmware and no shader libraries made from game
-  shaders. Game profiles hold only identifiers, hashes, offsets and short instruction words used to check a patch's place.
+- O código próprio do repositório é MIT ([LICENSE](LICENSE): o copyright do seedds e o do renelima), exceto os arquivos marcados GPL-3.0-or-later: o
+  port da geração de frames (`dm/gfx/vk_android/lsfg`), o `InstEmitAmpereMesh.cs` do tradutor de shaders e o script da marca Anka
+  (`android/tools/anka_logo.py`).
+- **O app Android é GPL-3.0-or-later como um todo.** O APK vincula o port da geração de frames (`dm/gfx/vk_android/lsfg`, GPL-3.0-or-later), a menos que
+  seja compilado com `-PnxLsfg=false`, e um APK que traz o packer no celular também traz o tradutor de shaders GPL. Quem repassar um APK assim deve
+  oferecer seu código-fonte completo: este repositório no commit indicado pela tag de build do app. Detalhes: [android/NOTICE.md](android/NOTICE.md).
+- A marca do NativeAYN (o "N sobre um infinito" em laranja e azul) é um desenho próprio de renelima, usada no app, no launcher e no repositório. Seu script
+  `android/tools/anka_logo.py` é Copyright 2026 renelima, GPL-3.0-or-later (o texto da licença: [dm/gfx/vk_android/lsfg/COPYING](dm/gfx/vk_android/lsfg/COPYING)).
+  Os ícones que ele gera (`android/images/logo.png` e os arquivos `anka_*.png` e `ic_launcher*.png` em `android/app/src/main/res`) são arte de renelima e
+  também são licenciados GPL-3.0-or-later. O `android/tools/anka_icons.py`, que os escreve a partir do script, é MIT.
+- Os profiles de jogo (`dm/games/<title ID>`) mantidos neste repositório são Ocarina of Time (`0400486024DEC000`), Donkey Kong Bananza
+  (`040074A01BF12000`) e Mario Kart World (`0400C3F00006E000`); os profiles do nxnative para outros jogos não foram trazidos.
+- Nada de nenhum jogo está neste repositório ou no app: nenhum código de jogo, nenhum dado de jogo, nenhuma chave, nenhum firmware e nenhuma biblioteca
+  de shaders feita a partir de shaders de jogo. Os profiles de jogo guardam apenas identificadores, hashes, offsets e pequenas palavras de instrução
+  usadas para conferir o lugar de um patch.
 
-Not affiliated with Nintendo, any game publisher, or any of the projects above.
+Sem afiliação com a Nintendo, nenhuma publicadora de jogos ou qualquer dos projetos acima.

@@ -1,45 +1,45 @@
-# Contributing
+# Contribuindo
 
-Issues and pull requests are welcome. This page says how a change gets in; what the code does and where things are is in [AGENTS.md](AGENTS.md) and [docs/development.md](docs/development.md).
+Issues e pull requests são bem-vindos. Esta página diz como uma mudança entra no projeto; o que o código faz e onde as coisas ficam está em [docs/development.md](docs/development.md).
 
-## Reporting a problem
+## Como relatar um problema
 
-Open an issue with the bug report form. It asks for what a problem is traced with: the nxnative commit, the shader chain version, the game's title ID and version, the device and OS, how the game was built and run, environment overrides, and the whole log of the run. [Playing](docs/playing.md) says where the iPhone app's log is; a Mac app writes `~/Library/Logs/nxnative/<title ID>.log`.
+Abra uma issue com o formulário de bug report. Ele pede o que serve para rastrear um problema: o commit do nxnative, a versão da shader chain, o title ID e a versão do jogo, o dispositivo e o sistema operacional, como o jogo foi compilado e executado, as substituições de ambiente e o log completo da execução. [Jogando](docs/playing.md) diz onde fica o log do app do iPhone; um app de Mac escreve em `~/Library/Logs/nxnative/<title ID>.log`.
 
-`python3 scripts/bug_report.py <title ID | path to the .app | NSP folder>` collects most of this into one zip to attach: `report.md` with the game, commit, chain version, device, settings and the list of files, plus the Mac app's logs, the NSP script's logs under `<title ID>_build/logs` and recent crash reports. Add `--ios-log log.txt` for an iPhone log. It reads only text logs and settings, never game files or keys; it writes your home folder as `~` and drops lines that look like key material. Look at the zip before you attach it.
+`python3 scripts/bug_report.py <title ID | path to the .app | NSP folder>` junta a maior parte disso em um zip para anexar: `report.md` com o jogo, o commit, a versão da chain, o dispositivo, as configurações e a lista de arquivos, além dos logs do app de Mac, dos logs do script do NSP em `<title ID>_build/logs` e dos crash reports recentes. Use `--ios-log log.txt` para um log do iPhone. Ele lê apenas logs de texto e configurações, nunca arquivos do jogo nem chaves; escreve sua pasta home como `~` e descarta linhas que pareçam material de chaves. Confira o zip antes de anexá-lo.
 
-## Never game files or keys
+## Nunca envie arquivos de jogo ou chaves
 
-Never commit or attach game files, keys, title keys or anything extracted from a game: RomFS, code modules, shaders, dumps. Game files and their extractions stay in the game's NSP folder ([AGENTS.md](AGENTS.md)). Logs, screenshots, title IDs, build IDs and offsets are fine.
+Nunca faça commit nem anexe arquivos de jogo, chaves, title keys ou qualquer coisa extraída de um jogo: RomFS, módulos de código, shaders, dumps. Arquivos de jogo e suas extrações ficam na pasta NSP do jogo ([docs/development.md](docs/development.md)). Logs, screenshots, title IDs, build IDs e offsets podem.
 
-## Before you start
+## Antes de começar
 
-- Read [AGENTS.md](AGENTS.md): it lists where to start for each kind of task, and the rules for profiles, per-build knowledge and the shader translation chain.
-- A crash, a hang or a wrong picture: search the [symptom index](docs/agents/symptoms.md) for the text in the log first.
-- Another game: run `scripts/build_ipa_from_nsp.py` on its NSP folder and follow [Port another game](docs/development.md#port-another-game).
-- Prefer a fix that holds for every game to a game-specific rule, and fix a bug at its cause ([AGENTS.md](AGENTS.md)).
+- Leia [docs/agents/README.md](docs/agents/README.md) e [docs/development.md](docs/development.md): eles listam por onde começar em cada tipo de tarefa e as regras de profiles, de conhecimento por build e da shader chain de tradução.
+- Crash, travamento ou imagem errada: procure primeiro no [índice de sintomas](docs/agents/symptoms.md) o texto que está no log.
+- Outro jogo: rode `scripts/build_ipa_from_nsp.py` na pasta NSP dele e siga [Portar outro jogo](docs/development.md#port-another-game).
+- Prefira uma correção que valha para todos os jogos a uma regra específica de um jogo, e corrija um bug na causa ([docs/development.md](docs/development.md)).
 
-## A pull request
+## Um pull request
 
-- **One change per PR, off `main`.** Rebase on `main` rather than merging it in.
-- **Commits.** Each commit message says what changed and why, in plain English sentences, as the history does: the symptom, the cause, the fix, and what was measured or checked.
-- **Where findings go.** A fact about one game goes in its note (`dm/games/<id>/README.md`). A general mechanism gets an entry in `docs/reference/<subsystem>.md` (Symptom, Cause, Fix, Found on), followed by `python3 dm/tools/docs_symptoms.py`. A new game takes its profile, its note and its row in the games table ([dm/games/README.md](dm/games/README.md)).
-- **The shader chain.** After changing one of its tools, run `python3 dm/gfx/tools/dmsh_chain.py --header` and commit `dm/gfx/nvn/dmsh_chain.h` with the change. Every game's shaders are then rebuilt, so say which games you checked.
-- **Tests.** CI runs the host tests, the CPU-only graphics tests, the tool tests and the builds ([Continuous integration](docs/development.md#continuous-integration)). GitHub's runners have no Metal 4, so run the GPU tests on an Apple-silicon Mac: `make -C dm/gfx/tests GAME=<id> run`.
-- **The PR text.** Fill in the template: what and why, what was checked (tests, games, devices), and which docs changed.
+- **Uma mudança por PR, a partir do `main`.** Faça rebase sobre o `main` em vez de mesclá-lo.
+- **Commits.** Cada mensagem de commit diz o que mudou e por quê, em frases simples em inglês, como o histórico faz: o sintoma, a causa, a correção e o que foi medido ou verificado.
+- **Para onde vão as descobertas.** Um fato sobre um jogo vai na sua nota (`dm/games/<id>/README.md`). Um mecanismo geral ganha uma entrada em `docs/reference/<subsystem>.md` (Symptom, Cause, Fix, Found on), seguida de `python3 dm/tools/docs_symptoms.py`. Um novo jogo recebe seu profile, sua nota e sua linha na tabela de jogos ([dm/games/README.md](dm/games/README.md)).
+- **A shader chain.** Depois de mudar uma de suas ferramentas, rode `python3 dm/gfx/tools/dmsh_chain.py --header` e faça commit de `dm/gfx/nvn/dmsh_chain.h` junto com a mudança. Os shaders de todos os jogos são reconstruídos depois disso, então diga quais jogos você verificou.
+- **Testes.** A CI roda os testes do host, os testes de gráficos apenas de CPU, os testes das ferramentas e os builds ([Integração contínua](docs/development.md#continuous-integration)). Os runners do GitHub não têm Metal 4, então rode os testes de GPU em um Mac com Apple silicon: `make -C dm/gfx/tests GAME=<id> run`.
+- **O texto do PR.** Preencha o template: o quê e por quê, o que foi verificado (testes, jogos, dispositivos) e quais docs mudaram.
 
-## Large changes and other platforms
+## Mudanças grandes e outras plataformas
 
-- **Agree on the scope first.** Open an issue before writing a change that adds a platform or device class, adds a second implementation of an existing path (for example a rendering path for GPUs without Metal 4), or runs to more than about 1,000 lines. A large PR built on an older `main` can rarely be reviewed or merged, however well it was tested.
-- **One concern per PR.** A new front end, a platform baseline and one game's fixes are separate PRs, each on current `main`.
-- **Supported devices** are the ones [README.md](README.md) names: iOS / iPadOS 26 or later on an iPhone with an A17 Pro chip or later or an iPad with an M1 chip or later, and Macs with Apple silicon. Supporting older devices or Intel Macs is the maintainer's decision, so ask in an issue first: it would add code paths that every later change has to keep working and that few contributors can test.
+- **Combine o escopo primeiro.** Abra uma issue antes de escrever uma mudança que adiciona uma plataforma ou classe de dispositivo, adiciona uma segunda implementação de um caminho existente (por exemplo, um caminho de renderização para GPUs sem Metal 4) ou passa de cerca de 1.000 linhas. Um PR grande feito sobre um `main` antigo raramente consegue ser revisado ou mesclado, por melhor testado que tenha sido.
+- **Um assunto por PR.** Um front end novo, uma linha de base de plataforma e as correções de um jogo são PRs separados, cada um sobre o `main` atual.
+- **Dispositivos compatíveis** são os que o [README.md](README.md) cita: iOS / iPadOS 26 ou posterior em um iPhone com chip A17 Pro ou posterior ou um iPad com chip M1 ou posterior, e Macs com Apple silicon. Suportar dispositivos mais antigos ou Macs com Intel é decisão do mantenedor, então pergunte primeiro em uma issue: isso adicionaria caminhos de código que toda mudança futura precisa continuar fazendo funcionar e que poucos contribuidores conseguem testar.
 
-## Graphical front ends
+## Front ends gráficos
 
-An app that packs games, lists them or starts them (a build window, a game library) is a separate project that builds on nxnative, not a part of this repository. [NX2Apple](https://github.com/LNPANDY/NX2Apple) is one, and [README.md](README.md) points players to it. Such an app needs no changes here to work: the NSP script reports its stages as JSON lines (`--progress json`), a built Mac app or IPA carries the list of its game's settings (`dm/launcher.json`, from `dm/games/settings.tsv`), and the app takes those settings as environment switches or as saved choices in its preferences, which every start reads ([Front ends](docs/frontends.md)). When a front end needs more from nxnative (a new event, a field in the settings list), open an issue or a small PR for that piece.
+Um app que faz pack de jogos, os lista ou os inicia (uma janela de build, uma biblioteca de jogos) é um projeto separado que usa o nxnative como base, não uma parte deste repositório. O [NX2Apple](https://github.com/LNPANDY/NX2Apple) é um exemplo, e o [README.md](README.md) aponta os usuários para ele. Um app assim não precisa de nenhuma mudança aqui para funcionar: o script do NSP informa suas etapas como linhas JSON (`--progress json`), um app de Mac ou IPA já compilado leva a lista de configurações do seu jogo (`dm/launcher.json`, gerado de `dm/games/settings.tsv`), e o app aceita essas configurações como switches de ambiente ou como escolhas salvas em suas preferências, que toda inicialização lê ([Front ends](docs/frontends.md)). Quando um front end precisar de mais do nxnative (um novo evento, um campo na lista de configurações), abra uma issue ou um PR pequeno só para essa parte.
 
-The settings screen inside the iPhone and iPad app and the settings window inside a Mac app are part of nxnative ([Settings](docs/settings.md)): they draw the same list and keep the same saved choices as any front end.
+A tela de configurações dentro do app de iPhone e iPad e a janela de configurações dentro de um app de Mac fazem parte do nxnative ([Configurações](docs/settings.md)): elas desenham a mesma lista e guardam as mesmas escolhas salvas que qualquer front end.
 
-## How changes get in
+## Como as mudanças entram
 
-The maintainer reviews every PR. A PR is often taken in as a squashed or reworked commit on `main` that credits its author (`Co-authored-by`), and the PR is then closed rather than merged; that is expected. The maintainer may rebase or rework a PR that conflicts with `main` while taking it in.
+O mantenedor revisa todo PR. Um PR costuma entrar como um commit squashado ou refeito no `main` que dá crédito ao autor (`Co-authored-by`), e a PR é fechada em vez de mesclada; isso é esperado. O mantenedor pode fazer rebase ou refazer um PR que conflita com o `main` ao aceitá-lo.

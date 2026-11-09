@@ -67,7 +67,7 @@ O APK resultante (`build/outputs/apk/debug/`) embute o host do jogo escolhido. T
 
 ## Contribuindo
 
-Relatos de compatibilidade vão em [Discussions](https://github.com/renelima/NativeAYN/discussions); bugs reproduzíveis, em [Issues](https://github.com/renelima/NativeAYN/issues). PRs são bem-vindos — abra uma issue antes para mudanças grandes. Docs técnicas do hospedeiro estão em `docs/` e `AGENTS.md` (inglês).
+Relatos de compatibilidade vão em [Discussions](https://github.com/renelima/NativeAYN/discussions); bugs reproduzíveis, em [Issues](https://github.com/renelima/NativeAYN/issues). PRs são bem-vindos — abra uma issue antes para mudanças grandes. Docs técnicas do hospedeiro estão em `docs/`.
 
 ## Aviso legal
 
