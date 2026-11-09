@@ -6,6 +6,14 @@ Histórico das releases do **NativeAYN**, o recompilador de Switch 2 para Androi
 O app é construído sobre o projeto base ([créditos em NOTICE.md](NOTICE.md)); o histórico dele antes do NativeAYN não faz parte deste arquivo — o versionamento
 do NativeAYN começa no 0.1.0. Builds de lançamento: [docs/RELEASING.md](docs/RELEASING.md).
 
+## NativeAYN 0.1.4 (2026-11-09)
+
+### Ajuste
+
+- A confirmação "Parar o jogo?" diz só que o jogo termina e o progresso não salvo é perdido: nada de menção ao log ali.
+- **O menu do jogo (painel de pausa) ficou mais largo por dentro**: o recheio da folha passou de 20 dp para 32 dp — os tiles de ícone e as linhas
+  não ficam mais colados na borda da folha. As outras telas do app continuam como estavam.
+
 ## NativeAYN 0.1.3 (2026-11-09)
 
 ### Ajuste

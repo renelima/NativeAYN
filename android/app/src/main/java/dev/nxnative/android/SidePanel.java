@@ -39,7 +39,7 @@ final class SidePanel extends FrameLayout {
         addView(scrim, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
         box = new LinearLayout(a);
         box.setOrientation(LinearLayout.VERTICAL);
-        int p = Math.round(20 * dp);
+        int p = Math.round(32 * dp);   // roomier sheet: the icon tiles never sit tight against the sheet's edge
         box.setPadding(p, Math.round(14 * dp), p, Math.round(24 * dp));
         ScrollView sv = new ScrollView(a);
         sv.setBackgroundColor(0xF41A1A1A);   // the charcoal sheet, nearly opaque, like a console quick menu
@@ -257,7 +257,7 @@ final class SidePanel extends FrameLayout {
 
     /** The Stop row: one confirmation, then the session ends (the game's pause lives on its own, in the settings and on background return) */
     private void stopConfirm() {
-        new AlertDialog.Builder(act).setTitle(Lang.t(act, "Stop the game?")).setMessage(Lang.t(act, "The game ends; unsaved progress is lost. The log stays for Share log."))
+        new AlertDialog.Builder(act).setTitle(Lang.t(act, "Stop the game?")).setMessage(Lang.t(act, "The game ends; unsaved progress is lost."))
                 .setPositiveButton(Lang.t(act, "Stop"), (d, w) -> { Native.note("stopped by the user"); if (act instanceof GameActivity) ((GameActivity) act).backToFrontend(); android.os.Process.killProcess(android.os.Process.myPid()); })
                 .setNegativeButton(Lang.t(act, "Keep running"), null).show();
     }

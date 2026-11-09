@@ -72,8 +72,7 @@ final class Lang {
         p("Stop the intro skip", "Parar de pular a abertura");
         p("Skip the intro now", "Pular a abertura agora");
         p("Stop the game?", "Parar o jogo?");
-        p("The game ends; unsaved progress is lost. The log stays for Share log.",
-                "O jogo termina; progresso não salvo é perdido. O log fica para o \"Compartilhar log\".");
+        p("The game ends; unsaved progress is lost.", "O jogo termina; progresso não salvo é perdido.");
         p("Keep running", "Deixar rodando");
 
         // ---- Controller mapping (ControllerControls) ----
