@@ -176,7 +176,7 @@ final class Prefs {
     /** Which key signed this APK, for logs and reports: the signer's SHA-256, first 16 hex digits */
     static String signerId(Context ctx) { return Signer.shortId(signers(ctx)); }
 
-    /** The build identifier alone (Signer.buildId): "launcher-2@4a15067", "0.1 · 6a6448d". Home shows it under its title (the build tag would not fit a phone's width) */
+    /** The build identifier alone (Signer.buildId): "v0.1.0" (the version; no git text in the player's screens). Home shows it under its title */
     static String buildId() {
         return Signer.buildId(BuildConfig.NX_PLAY, BuildConfig.VERSION_NAME, BuildConfig.NX_COMMIT, BuildConfig.NX_DIRTY, BuildConfig.NX_BRANCH);
     }

@@ -23,7 +23,7 @@ def official_in_source():
 
 OFFICIAL = official_in_source()   # None until the release key exists
 SAMPLE = hashlib.sha256(b'a sample release certificate').hexdigest()   # the marks against a given certificate
-TAG = 'Anka Native 0.1 · 6a6448d'
+TAG = 'NativeAYN v0.1'
 
 
 @unittest.skipUnless(shutil.which('javac') and shutil.which('java'), 'no JDK')
@@ -71,11 +71,11 @@ class Stamp(unittest.TestCase):
         self.assertEqual(self.java('tagwith', 'not set', TAG, 1, 'not set'), TAG + ' · unofficial build')     # an unset certificate matches nothing
 
     def test_build_id(self):
-        """Home's build identifier and the overlay's build tag come from one function: the tag is the app's name and the identifier"""
+        """Home's build identifier and the overlay's build tag come from one function: the tag is the app's name and the version; no git text is shown"""
         self.assertEqual(self.java('build', 0, '0.1.1-test', '4a150670aa', '-', 'android-launcher-2'),
-                         'launcher-2@4a15067|Anka Native test · launcher-2@4a15067')
-        self.assertEqual(self.java('build', 0, '0.1.1', 'unknown', '+dirty', 'int'), 'int@unknown+dirty|Anka Native test · int@unknown+dirty')
-        self.assertEqual(self.java('build', 1, '0.1-release', '6a6448d123', '-', 'main'), '0.1 · 6a6448d|' + TAG)
+                         'v0.1.1|NativeAYN v0.1.1')
+        self.assertEqual(self.java('build', 0, '0.1.1', 'unknown', '+dirty', 'int'), 'v0.1.1|NativeAYN v0.1.1')
+        self.assertEqual(self.java('build', 1, '0.1-release', '6a6448d123', '-', 'main'), 'v0.1|' + TAG)
 
     def test_short_id(self):
         other = hashlib.sha256(b'x').hexdigest()

@@ -5,6 +5,16 @@ Changes in NativeAYN, grouped by topic. Most of the new behaviour is behind `DM_
 ([dm/games/0400486024DEC000/game.tsv](dm/games/0400486024DEC000/game.tsv)), so other games keep their old behaviour unless a switch is set.
 The credits for the code it is built on are in [NOTICE.md](NOTICE.md).
 
+## NativeAYN 0.1.0 (2026-11-09)
+
+NativeAYN's first release. The sections below it are the base project's history; NativeAYN's own versioning starts here.
+
+- **NativeAYN identity**: the player is renamed and rebranded end to end — package `dev.nativeayn.android`, its own "N" mark, launcher icon and a deep navy/teal always-dark palette (the "Deep Space Cockpit" layout: 64 dp header with a teal accent rule, tighter cards, gradient game tiles); the README and all project documentation are in Brazilian Portuguese.
+- **Controller mapping** (new): the in-game panel's **Controller** section maps the handheld's physical buttons to game buttons — tap the row, press the button, saved per connected pad, with adjustable dead zone; the map re-applies when the pad reconnects.
+- **Keep screen on** (new): the game and the launcher keep the screen lit while open; the system idle timer no longer sleeps a running session.
+- **Version shown, git not**: Home, the overlay and the About line show `v<version>` (for example `v0.1.0`); branch and commit no longer appear in any player-visible text (the signer id in the logs still identifies a build).
+- **Build**: `-PnxAppId=<id>` builds the renamed app; Ocarina of Time (`0400486024DEC000`) is the flagship title, measured on the AYN Odin 3 (Adreno 830, Android 15). The Donkey Kong Bananza and Mario Kart World profiles are carried over and not revalidated in this release.
+
 ## NativeAYN 0.2.1
 
 - **Prepare on the phone stopped at the end for Ocarina of Time** ([#3](https://github.com/renelima/NativeAYN/issues/3)): "76 of 42346 shaders did

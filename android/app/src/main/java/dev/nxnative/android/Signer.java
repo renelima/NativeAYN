@@ -63,24 +63,17 @@ final class Signer {
     }
 
     /**
-     * Which build this is, without the app's name: play app "0.1 · 6a6448d" (the version up to its "-", the commit); test app "int@6a6448d" (the branch without
-     * "android-", the commit). "+dirty" follows the commit when the tree had changes. No build time: the commit and the signer's fingerprint identify a build. Home
-     * shows it under the title; {@link #buildTag} is it with the app's name, so the two never disagree
+     * Which build this is, without the app's name: the version alone, "v0.1.0" (cut at its "-"). No git branch or commit appears in any text the player reads (the
+     * author's rule); the signer id the logs carry still tells builds apart. Home shows it under the title; {@link #buildTag} is it with the app's name, so the two
+     * never disagree
      */
     static String buildId(boolean play, String versionName, String commit, String dirty, String branch) {
-        String c = commit;
-        if (c.length() > 7 && !c.equals("unknown")) c = c.substring(0, 7);
-        c += dirty;
-        if (play) {
-            int d = versionName.indexOf('-');
-            return (d > 0 ? versionName.substring(0, d) : versionName) + " · " + c;
-        }
-        String b = branch.startsWith("android-") ? branch.substring(8) : branch;
-        return b + "@" + c;
+        int d = versionName.indexOf('-');
+        return "v" + (d > 0 ? versionName.substring(0, d) : versionName);
     }
 
-    /** The build tag without its mark: "NativeAYN &lt;buildId&gt;" (play app), "NativeAYN test · &lt;buildId&gt;" (test app) */
-    static String buildTag(boolean play, String buildId) { return "NativeAYN " + (play ? "" : "test · ") + buildId; }
+    /** The build tag without its mark: "NativeAYN v0.1.0" */
+    static String buildTag(boolean play, String buildId) { return "NativeAYN " + buildId; }
 
     /** The build tag with its mark:"<tag> · official", "<tag> · unofficial build", or the tag alone (test app) */
     static String tag(String tag, boolean play, String[] signers) { return tag(tag, play, signers, OFFICIAL); }
