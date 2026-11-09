@@ -6,6 +6,22 @@ Histórico das releases do **NativeAYN**, o recompilador de Switch 2 para Androi
 O app é construído sobre o projeto base ([créditos em NOTICE.md](NOTICE.md)); o histórico dele antes do NativeAYN não faz parte deste arquivo — o versionamento
 do NativeAYN começa no 0.1.0. Builds de lançamento: [docs/RELEASING.md](docs/RELEASING.md).
 
+## NativeAYN 0.1.1 (2026-11-09)
+
+### Corrigido
+
+- **Mapeamento de controle volta a funcionar no painel do jogo**: as seções do painel em forma de folha são diálogos, e um diálogo tem janela própria — com a
+  folha do Mapeamento de controle aberta, o botão apertado no controle morria na janela do diálogo e nunca chegava à captura da linha, então nenhuma linha era
+  atribuída. A janela da folha agora entrega a tecla física à captura antes de qualquer outro tratamento; fechar a folha também desarma uma espera de tecla.
+
+### Novo desde o 0.1.0
+
+- **Home como prateleira de console** e a paleta "Console Shelf" (fundo carvão liso, box art com sombra leve), com a arte de capa lida do pack, de um `.jpg`
+  ao lado do `.nup` ou do `icon.jpg` da pasta do dump.
+- **Menu do jogo em pausa**: o painel dentro do jogo vira um menu de uma linha por seção, cada uma abrindo a sua folha; o mapeamento de controle é uma dessas seções.
+- **Atualização dentro do app**: um build `-PnxAppId` (`dev.nativeayn.android`) verifica as releases do projeto no GitHub na abertura e nos Ajustes, e instala a
+  nova versão por cima sem perder o jogo nem os saves (mesma chave de assinatura).
+
 ## NativeAYN 0.1.0 (2026-11-09)
 
 Primeira release. Ocarina of Time (`0400486024DEC000`, update v131072) é o título principal, medido no AYN Odin 3 (Adreno 830, Android 15); os profiles de

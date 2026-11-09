@@ -12,8 +12,13 @@ import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.RippleDrawable;
 import android.text.TextUtils;
 import android.view.Gravity;
+import android.view.KeyEvent;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.Window;
 import android.view.WindowInsets;
 import android.widget.Button;
 import android.widget.CheckBox;
@@ -609,7 +614,33 @@ final class Ui {
         int p = dp(a, 20);
         content.setPadding(p, dp(a, 4), p, dp(a, 8));
         sv.addView(content);
-        return new AlertDialog.Builder(a).setTitle(title).setView(sv);
+        // The Builder is overridden so every sheet's window passes physical keys through the controller capture first (see keyGuard)
+        return new AlertDialog.Builder(a) {
+            @Override public AlertDialog create() { return keyGuard(super.create()); }
+        }.setTitle(title).setView(sv);
+    }
+
+    /**
+     * A Dialog has its own window: while one is open its key events never reach the Activity's dispatchKeyEvent, where the Controller
+     * rows' capture sits, and the sheet's focused view would eat a gamepad button as a click (that broke the in-game Controller mapping).
+     * The dialog's window callback is wrapped: a physical key goes to ControllerControls.capture before the sheet sees it; everything
+     * else, and every other callback, goes to the dialog unchanged. A dynamic proxy: the callback's exact method set is whatever this
+     * Android's Window.Callback has, with nothing to keep in step by hand.
+     */
+    private static AlertDialog keyGuard(AlertDialog d) {
+        Window w = d.getWindow();
+        final Window.Callback cb = w == null ? null : w.getCallback();
+        if (cb == null) return d;
+        w.setCallback((Window.Callback) java.lang.reflect.Proxy.newProxyInstance(
+                Window.Callback.class.getClassLoader(), new Class<?>[]{Window.Callback.class},
+                (proxy, m, args) -> {
+                    if (m.getName().equals("dispatchKeyEvent") && args != null && args.length == 1 && args[0] instanceof KeyEvent) {
+                        KeyEvent e = (KeyEvent) args[0];
+                        if (ControllerControls.capturing() && ControllerControls.capture(e)) return Boolean.TRUE;
+                    }
+                    return m.invoke(cb, args);
+                }));
+        return d;
     }
 
     /**

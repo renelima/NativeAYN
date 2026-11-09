@@ -253,7 +253,7 @@ final class ControllerControls {
         reloadRows();
     }
 
-    /** Whether a row is waiting for its key: GameActivity.dispatchKeyEvent sends physical key events to capture() while this is true */
+    /** Whether a row is waiting for its key: the open sheet's window guard (Ui.keyGuard) and GameActivity.dispatchKeyEvent send physical key events to capture() while this is true */
     static boolean capturing() { return panel != null && panel.captureRow >= 0; }
 
     /** A key event while a row is capturing (GameActivity.dispatchKeyEvent): true when the capture consumed it, so the game never sees it. Home passes through and closes the panel, which ends the capture. */

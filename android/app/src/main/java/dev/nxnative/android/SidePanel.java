@@ -204,7 +204,9 @@ final class SidePanel extends FrameLayout {
     private void padDialog() {
         LinearLayout b = dialogBox();
         ControllerControls.rows(act, b);
-        Ui.sheet(act, "Controller mapping", b).setPositiveButton("Done", null).show();
+        Ui.sheet(act, "Controller mapping", b).setPositiveButton("Done", null)
+                .setOnDismissListener(d -> ControllerControls.endCapture())   // a row still waiting for a key gives up when the sheet goes
+                .show();
     }
 
     private void skipDialog() {
