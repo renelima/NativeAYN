@@ -421,6 +421,9 @@ def main():
         if a.code_only: print(f'done: the modules in {out} (--code-only: pack.tsv and the shaders unchanged)'); return
         if a.keep_code: upgrade_keys(srcs, out, g)   # before the copy below replaces the game.tsv an earlier key was made with (a rewrite run did it in rewrite)
         shutil.copyfile(g.dir / 'game.tsv', out / 'game.tsv')
+        for d_ in (g.dir, g.dir / 'base'):   # the game icon nx_extract saved from the control data: the launcher shows it as the card's box art
+            if (d_ / 'icon.jpg').is_file():
+                shutil.copy2(d_ / 'icon.jpg', out / 'icon.jpg'); print(f'  game icon: {d_ / "icon.jpg"} (card art)'); break
         shaders = None if a.no_shaders else pack_shaders(a, g, folder.parent / f'{app:016X}-work', out, vdir, (romfs, exe))
         top = folder.parent if pack_dump.nup.is_nup(folder) else folder   # a NUP file's paths are `<name>.nup:<package>/...`, relative to its folder
         rel = lambda p: p.relative_to(top).as_posix()

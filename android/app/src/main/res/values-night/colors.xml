@@ -1,19 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- NativeAYN is dark by design: the night set is the day set (see values/colors.xml) -->
-    <color name="bn_bg">#FF0B1220</color>
-    <color name="bn_card">#FF141E30</color>
-    <color name="bn_card_stroke">#FF24344E</color>
-    <color name="bn_tint">#FF1C2A42</color>
-    <color name="bn_banana">#FF2DD4BF</color>
-    <color name="bn_banana_deep">#FF0D9488</color>
-    <color name="bn_on_banana">#FF062A25</color>
-    <color name="bn_text">#FFE8EEF8</color>
-    <color name="bn_text_2">#FF9FB2CC</color>
-    <color name="bn_accent">#FF2DD4BF</color>
+    <color name="bn_bg">#FF262626</color>
+    <color name="bn_card">#FF313131</color>
+    <color name="bn_card_stroke">#FF404040</color>
+    <color name="bn_tint">#FF3B3B3B</color>
+    <color name="bn_banana">#FF2AA7E6</color>
+    <color name="bn_banana_deep">#FF1176B8</color>
+    <color name="bn_on_banana">#FFF2FAFF</color>
+    <color name="bn_text">#FFF2F2F2</color>
+    <color name="bn_text_2">#FFB9B9B9</color>
+    <color name="bn_accent">#FF2AA7E6</color>
     <color name="bn_leaf">#FF34D399</color>
     <color name="bn_on_leaf">#FF06231A</color>
     <color name="bn_danger">#FFF87171</color>
-    <color name="bn_danger_tint">#FF3A1E24</color>
-    <color name="bn_warn_tint">#FF3A2E1A</color>
+    <color name="bn_danger_tint">#FF43262B</color>
+    <color name="bn_warn_tint">#FF43351F</color>
+    <color name="bn_select">#FF17A8DE</color>
 </resources>

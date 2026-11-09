@@ -33,7 +33,7 @@ final class SidePanel extends FrameLayout {
         this.fill = fill;
         float dp = getResources().getDisplayMetrics().density;
         View scrim = new View(a);
-        scrim.setBackgroundColor(0x8A04070D);   // a deeper navy dim: the game reads as "paused behind a menu"
+        scrim.setBackgroundColor(0x8A000000);   // a deep charcoal dim: the game reads as "paused behind a menu"
         scrim.setOnClickListener(v -> close());
         addView(scrim, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
         box = new LinearLayout(a);
@@ -41,12 +41,12 @@ final class SidePanel extends FrameLayout {
         int p = Math.round(20 * dp);
         box.setPadding(p, Math.round(14 * dp), p, Math.round(24 * dp));
         ScrollView sv = new ScrollView(a);
-        sv.setBackgroundColor(0xF40C1322);   // the deep navy sheet, nearly opaque, like a console quick menu
+        sv.setBackgroundColor(0xF41A1A1A);   // the charcoal sheet, nearly opaque, like a console quick menu
         sv.addView(box);
         int w = Math.round(Math.min(420 * dp, a.getResources().getDisplayMetrics().widthPixels * 0.55f));
         addView(sv, new LayoutParams(w, LayoutParams.MATCH_PARENT, Gravity.END));
-        View edge = new View(a);   // the teal edge: this menu belongs to NativeAYN, the same accent rule as the Home header
-        edge.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, new int[]{0xFF2DD4BF, 0x002DD4BF}));
+        View edge = new View(a);   // the grey edge: this menu belongs to NativeAYN, the same quiet mark as the panel's texts
+        edge.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, new int[]{0xFFB9B9B9, 0x00B9B9B9}));
         addView(edge, new LayoutParams(Math.round(2 * dp), LayoutParams.MATCH_PARENT, Gravity.END));
         sheet = sv;
         setVisibility(GONE);
@@ -104,7 +104,7 @@ final class SidePanel extends FrameLayout {
     }
 
     private void build() {
-        // The menu's header: the NativeAYN mark, its name, the running game's name, the teal rule
+        // The menu's header: the NativeAYN mark, its name, the running game's name, the grey rule
         LinearLayout h = Ui.row(act);
         h.setMinimumHeight(Ui.dp(act, 52));
         h.addView(Ui.badge(act, 40));
@@ -115,11 +115,11 @@ final class SidePanel extends FrameLayout {
         t.setLetterSpacing(-0.01f);
         col.addView(t);
         String name = act.getIntent().getStringExtra("name");
-        col.addView(Ui.text(act, name != null && !name.isEmpty() ? name : "In-game menu", 12, R.color.bn_accent, 600));
+        col.addView(Ui.text(act, name != null && !name.isEmpty() ? name : "In-game menu", 12, R.color.bn_text_2, 600));   // the game name sits back (grey), the same subtitle look as Home
         h.addView(col, Ui.weight());
         box.addView(h);
         View rule = new View(act);
-        rule.setBackground(new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT, new int[]{0xFF2DD4BF, 0x002DD4BF}));
+        rule.setBackground(new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT, new int[]{0xFFB9B9B9, 0x00B9B9B9}));   // the same soft grey as the panel's texts
         LinearLayout.LayoutParams rp = Ui.fill();
         rp.height = Ui.dp(act, 2);
         rp.topMargin = Ui.dp(act, 4);

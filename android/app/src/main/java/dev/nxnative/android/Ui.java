@@ -33,7 +33,7 @@ import android.widget.TextView;
  * <ul>
  * <li>Type: page title 24 sp heavy, heading 18 sp bold, body 15 sp, small 13 sp, section label 12 sp caps; buttons 15 sp semibold, one line.</li>
  * <li>Shapes: cards 16 dp corners with a hairline edge; buttons and icon buttons 10 dp corners (a card's big action 12 dp).</li>
- * <li>Spacing: every page has the same gutter (20 dp, 16 dp on a narrow screen), the same header (Ui.header: 64 dp over a 2 dp teal accent rule, 8 dp under the status
+ * <li>Spacing: every page has the same gutter (20 dp, 16 dp on a narrow screen), the same header (Ui.header: 64 dp over a 2 dp blue accent rule, 8 dp under the status
  * bar); cards 16 dp inside, 12 dp between cards, 24 dp before a section label.</li>
  * <li>Button and header icons are vector drawables (res/drawable/ic_*.xml) tinted from the palette, so they look the same on every phone; list rows keep their
  * emoji tiles.</li>
@@ -57,12 +57,12 @@ final class Ui {
         return g;
     }
 
-    /** A touch ripple in teal over a shape (the shape is its mask) */
+    /** A touch ripple in blue over a shape (the shape is its mask) */
     static Drawable ripple(Context c, GradientDrawable shape) {
         GradientDrawable mask = new GradientDrawable();   // an opaque copy of the shape: a transparent button (QUIET) still shows its ripple
         mask.setColor(Color.BLACK);
         mask.setCornerRadius(shape.getCornerRadius());
-        return new RippleDrawable(ColorStateList.valueOf(0x332DD4BF), shape, mask);
+        return new RippleDrawable(ColorStateList.valueOf(0x332AA7E6), shape, mask);
     }
 
     static Typeface face(int weight) { return Typeface.create(Typeface.SANS_SERIF, weight, false); }
@@ -105,7 +105,7 @@ final class Ui {
         return t;
     }
 
-    /** A group's label above its card (the settings page, a sheet), opened by a teal bracket */
+    /** A group's label above its card (the settings page, a sheet), opened by a blue bracket */
     static TextView section(Context c, CharSequence s) {
         android.text.SpannableString label = new android.text.SpannableString("\u258D " + s);
         label.setSpan(new android.text.style.ForegroundColorSpan(col(c, R.color.bn_banana)), 0, 1, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
@@ -141,14 +141,14 @@ final class Ui {
         return t;
     }
 
-    /** A game's tile: the first letter of its name on a teal gradient (light top, deep bottom), rounded */
+    /** A game's tile: the first letter of its name on a blue gradient (light top, deep bottom), rounded */
     static TextView tile(Context c, String name, int sizeDp) {
         String n = name == null ? "" : name.trim();
         TextView t = text(c, n.isEmpty() ? "?" : n.substring(0, n.offsetByCodePoints(0, 1)).toUpperCase(java.util.Locale.ROOT), sizeDp * 0.4f, R.color.bn_on_banana, 800);
         t.setGravity(Gravity.CENTER);
         t.setIncludeFontPadding(false);
         GradientDrawable tileBg = round(col(c, R.color.bn_banana), dp(c, 16), 0, 0);
-        tileBg.setColors(new int[]{0xFF5EEAD4, col(c, R.color.bn_banana_deep)});   // the NativeAYN teal gradient
+        tileBg.setColors(new int[]{0xFF7FC9EF, col(c, R.color.bn_banana_deep)});   // the NativeAYN blue gradient
         t.setBackground(tileBg);
         t.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         t.setLayoutParams(new LinearLayout.LayoutParams(dp(c, sizeDp), dp(c, sizeDp)));
@@ -250,8 +250,11 @@ final class Ui {
     static LinearLayout header(Context c, View leading, CharSequence title, View trailing) { return header(c, leading, title, null, trailing); }
 
     /** The same, with a small line under the title in the accent colour (Home: the build identifier, Prefs.buildId), or none when null. The header block carries NativeAYN's
-     *  accent rule: a 2 dp teal line fading out under the title, starting clear of the leading badge or back button */
-    static LinearLayout header(Context c, View leading, CharSequence title, CharSequence subtitle, View trailing) {
+     *  accent rule: a 2 dp blue line fading out under the title, starting clear of the leading badge or back button */
+    static LinearLayout header(Context c, View leading, CharSequence title, CharSequence subtitle, View trailing) { return header(c, leading, title, subtitle, trailing, true); }
+
+    /** The same, and rule=false leaves out NativeAYN's accent rule (the dashboard: the shelf speaks for itself) */
+    static LinearLayout header(Context c, View leading, CharSequence title, CharSequence subtitle, View trailing, boolean accent) {
         LinearLayout h = row(c);
         h.setMinimumHeight(dp(c, 64));
         if (leading != null) h.addView(leading);
@@ -267,7 +270,7 @@ final class Ui {
             col.setOrientation(LinearLayout.VERTICAL);
             col.setPadding(pad, 0, dp(c, 8), 0);
             col.addView(t);
-            TextView s = text(c, subtitle, 11, R.color.bn_accent, 600);
+            TextView s = text(c, subtitle, 11, R.color.bn_text_2, 600);   // the subtitle sits back (grey, not the accent): the title is the voice here
             s.setSingleLine(true);
             s.setEllipsize(TextUtils.TruncateAt.END);
             s.setTextIsSelectable(true);
@@ -275,11 +278,12 @@ final class Ui {
             h.addView(col, weight());
         }
         if (trailing != null) h.addView(trailing);
+        if (!accent) return h;   // no accent rule (the dashboard)
         LinearLayout box = new LinearLayout(c);   // the header row over its accent rule (NativeAYN's layout mark)
         box.setOrientation(LinearLayout.VERTICAL);
         box.addView(h, fill());
         View rule = new View(c);
-        rule.setBackground(new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT, new int[]{col(c, R.color.bn_banana), 0x002DD4BF}));   // teal, fading to a whisper
+        rule.setBackground(new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT, new int[]{col(c, R.color.bn_banana), 0x002AA7E6}));   // sky blue, fading to a whisper
         LinearLayout.LayoutParams rp = fill();
         rp.height = dp(c, 2);
         rp.leftMargin = dp(c, leading != null ? 62 : 4);
@@ -419,14 +423,10 @@ final class Ui {
         return r;
     }
 
-    /** The NativeAYN mark on its tile's gradient circle (Home's header) */
+    /** The NativeAYN mark (Home's header, the in-game panel): the bare mark on its own transparent background, no circle */
     static ImageView badge(Context c, int sizeDp) {
         ImageView v = new ImageView(c);
-        v.setImageDrawable(new android.graphics.drawable.InsetDrawable(c.getDrawable(R.drawable.anka_mark), 0.12f));   // the mark sits inside the circle
-        GradientDrawable g = new GradientDrawable();
-        g.setShape(GradientDrawable.OVAL);
-        g.setColors(new int[]{0xFF123A5C, 0xFF0A1B33});   // the icon tile's gradient, kept from the launcher icon
-        v.setBackground(g);
+        v.setImageResource(R.drawable.anka_mark);   // the mark is already transparent around the art
         v.setScaleType(ImageView.ScaleType.FIT_CENTER);
         v.setLayoutParams(new LinearLayout.LayoutParams(dp(c, sizeDp), dp(c, sizeDp)));
         v.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
@@ -461,9 +461,9 @@ final class Ui {
         ImageView tile = new ImageView(c);
         tile.setImageResource(iconRes);
         tile.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        tile.setColorFilter(col(c, R.color.bn_accent));   // the panel's teal, the same accent as everything else here
+        tile.setColorFilter(col(c, R.color.bn_text_2));   // the panel's soft grey icons (same as the dashboard), not the accent
         tile.setPadding(dp(c, 12), dp(c, 12), dp(c, 12), dp(c, 12));
-        tile.setBackground(round(0xFF0A1424, dp(c, 12), 0, 0));
+        tile.setBackground(round(0xFF262626, dp(c, 12), 0, 0));
         tile.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         r.addView(tile, new LinearLayout.LayoutParams(dp(c, 46), dp(c, 46)));
         LinearLayout col = new LinearLayout(c);
@@ -487,7 +487,7 @@ final class Ui {
         return r;
     }
 
-    /** A setting's tick row: a CheckBox in the teal accent, body-size text (the in-game panel, a settings sheet) */
+    /** A setting's tick row: a CheckBox in the blue accent, body-size text (the in-game panel, a settings sheet) */
     static CheckBox toggle(Context c, CharSequence label, boolean on, android.widget.CompoundButton.OnCheckedChangeListener l) {
         CheckBox b = new CheckBox(c);
         b.setText(label);
@@ -501,7 +501,7 @@ final class Ui {
         return b;
     }
 
-    /** A pill selector: one option per segment, the chosen one solid teal (the game-menu look for fps caps, multipliers, sharpness) */
+    /** A pill selector: one option per segment, the chosen one solid blue (the game-menu look for fps caps, multipliers, sharpness) */
     static RadioGroup pillGroup(Context c, String[] labels, int checked, RadioGroup.OnCheckedChangeListener pick) {
         RadioGroup g = new RadioGroup(c);
         g.setOrientation(LinearLayout.HORIZONTAL);
@@ -520,7 +520,7 @@ final class Ui {
             b.setStateListAnimator(null);
             b.setTextColor(new ColorStateList(new int[][]{{android.R.attr.state_checked}, {}},
                     new int[]{col(c, R.color.bn_on_banana), col(c, R.color.bn_text_2)}));
-            b.setBackground(pillStates(c));   // the pill states (a teal ripple would need a single-shape mask; the states say it themselves)
+            b.setBackground(pillStates(c));   // the pill states (a blue ripple would need a single-shape mask; the states say it themselves)
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
             lp.leftMargin = i > 0 ? gap : 0;
             g.addView(b, lp);
@@ -530,7 +530,7 @@ final class Ui {
         return g;
     }
 
-    /** The pill states: selected solid teal, unselected a tinted pill with a hairline (a fresh instance per group) */
+    /** The pill states: selected solid blue, unselected a tinted pill with a hairline (a fresh instance per group) */
     private static android.graphics.drawable.StateListDrawable pillStates(Context c) {
         android.graphics.drawable.StateListDrawable s = new android.graphics.drawable.StateListDrawable();
         s.addState(new int[]{android.R.attr.state_checked}, round(col(c, R.color.bn_banana), dp(c, 19), 0, 0));
@@ -538,7 +538,7 @@ final class Ui {
         return s;
     }
 
-    /** A slider in the palette: teal progress, faint track */
+    /** A slider in the palette: blue progress, faint track */
     static void seek(Context c, android.widget.SeekBar b) {
         b.setProgressTintList(ColorStateList.valueOf(col(c, R.color.bn_accent)));
         b.setProgressBackgroundTintList(ColorStateList.valueOf(0x33FFFFFF));

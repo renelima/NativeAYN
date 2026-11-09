@@ -17,6 +17,7 @@ import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.FrameLayout;
+import android.widget.HorizontalScrollView;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -39,7 +40,7 @@ import java.util.List;
  * prepare one on the phone (or a card with Prepare, from a folder of games). A game without a profile in this APK is refused with a sentence (Profile.missing),
  * never started.
  * <p>
- * Each page sits in one ScrollView over the drifting bananas, so it scrolls on any screen (the folded phone's outer display, landscape, a split window), at a
+ * Each page sits in one ScrollView on the flat charcoal backdrop, so it scrolls on any screen (the folded phone's outer display, landscape, a split window), at a
  * readable width, centered on a wide window. The activity handles rotation itself (configChanges), so a size change builds the page again (onConfigurationChanged).
  */
 public final class MainActivity extends Activity {
@@ -48,7 +49,7 @@ public final class MainActivity extends Activity {
     private final List<Game> games = new ArrayList<>();
     private LinearLayout gameBox;   // the game cards (refresh)
     private View accessCard;
-    private BananaBackgroundView bananas;   // the drifting bananas behind the screen
+    private FrameLayout frame;   // the root: pages sit directly on the flat charcoal bn_bg (the Console Shelf style, no wallpaper)
     private Ui.Setting overlayRow, resRow, capRow, lsfgRow, gpuRow, updateRow;
     private boolean resumed, settingsPage;
     private boolean merged;   // the list's duplicates were merged (Game.collapse) since this activity started
@@ -60,9 +61,8 @@ public final class MainActivity extends Activity {
         super.onCreate(saved);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);   // the screen stays lit while the launcher is open (it is dropped when the app leaves the foreground)
         if (saved != null) settingsPage = saved.getBoolean("settings");
-        FrameLayout frame = new FrameLayout(this);
-        bananas = new BananaBackgroundView(this);
-        frame.addView(bananas, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        frame = new FrameLayout(this);
+        frame.setBackgroundColor(Ui.col(this, R.color.bn_bg));   // the flat charcoal screen of the Console Shelf style
         setContentView(frame);
         build();
         if (saved == null) fromIntent(getIntent());
@@ -96,10 +96,9 @@ public final class MainActivity extends Activity {
         else super.onBackPressed();
     }
 
-    /** (Re)builds the current page above the bananas (Ui.page: the same gutter, width and header spacing as every screen) */
+    /** (Re)builds the current page on the charcoal backdrop (Ui.page: the same gutter, width and header spacing as every screen) */
     private void build() {
-        FrameLayout frame = (FrameLayout) bananas.getParent();
-        while (frame.getChildCount() > 1) frame.removeViewAt(1);
+        while (frame.getChildCount() > 0) frame.removeViewAt(0);
         LinearLayout content = Ui.page(this, frame, 760);
         if (settingsPage) buildSettings(content);
         else buildHome(content);
@@ -107,13 +106,12 @@ public final class MainActivity extends Activity {
 
     private void buildHome(LinearLayout content) {
         overlayRow = null;
-        content.addView(Ui.header(this, Ui.badge(this, 48), "NativeAYN", Prefs.buildId(), Ui.iconButton(this, R.drawable.ic_settings, "Settings", Ui.Kind.TONAL, v -> page(true))));   // the build identifier under the title (Prefs.buildId, the part of the overlay's build tag after the app's name), so a screenshot of Home names its build; Settings › About has the full tag
-        accessCard = accessCard();
-        Ui.add(content, accessCard, 16);
+        content.addView(Ui.header(this, Ui.badge(this, 48), "NativeAYN", Prefs.buildId(), Ui.iconButton(this, R.drawable.ic_settings, "Settings", Ui.Kind.TONAL, v -> page(true)), false));   // no accent rule on the dashboard (the Console Shelf style); the build identifier under the title (Prefs.buildId, the part of the overlay's build tag after the app's name), so a screenshot of Home names its build; Settings › About has the full tag
         Ondevice.attach(this, content, content.getChildCount());   // a game being prepared and its progress (hidden when there is none)
         fixGap(content, Ui.GAP);
         gameBox = new LinearLayout(this);
         gameBox.setOrientation(LinearLayout.VERTICAL);
+        gameBox.setClipChildren(false);   // the raised (scaled) card spills a little past the row: let it
         Ui.add(content, gameBox, 16);
         refresh();
     }
@@ -127,13 +125,33 @@ public final class MainActivity extends Activity {
         }
     }
 
+    /**
+     * The file-access request as a tile of the shelf (refresh adds it as the row's first tile): the same size and quiet
+     * look as the game and plus tiles, so it sits beside them instead of a banner across the page
+     */
     private View accessCard() {
-        LinearLayout c = Ui.card(this);
-        c.setBackground(Ui.round(Ui.col(this, R.color.bn_warn_tint), dp(20), Ui.col(this, R.color.bn_banana_deep), dp(1)));
-        c.addView(Ui.heading(this, "Allow file access"));
-        Ui.add(c, Ui.body(this, "Needed to read your game dump."), 4);
-        Ui.add(c, Ui.button(this, "Allow", Ui.Kind.PRIMARY, v -> openAccessSettings()), 14, Ui.wrap());
-        return c;
+        int w = dp(210), h = dp(166);   // a little wider than a game tile, as tall as one
+        LinearLayout col = new LinearLayout(this);
+        col.setOrientation(LinearLayout.VERTICAL);
+        col.setGravity(Gravity.CENTER_HORIZONTAL);
+        LinearLayout tile = new LinearLayout(this);
+        tile.setOrientation(LinearLayout.VERTICAL);
+        tile.setGravity(Gravity.CENTER);
+        tile.setBackground(Ui.round(Ui.col(this, R.color.bn_card), dp(14), Ui.col(this, R.color.bn_card_stroke), dp(1)));
+        tile.setElevation(dp(3));   // the same light shadow as the plus tile
+        tile.setPadding(dp(14), dp(10), dp(14), dp(10));
+        TextView t = Ui.small(this, "Grant file access to read your game dump.");
+        t.setGravity(Gravity.CENTER);
+        tile.addView(t, Ui.wrap());
+        tile.addView(Ui.button(this, "Allow", Ui.Kind.QUIET, v -> openAccessSettings()), new LinearLayout.LayoutParams(dp(110), dp(40)));   // sized tile: the tap area the user expects at this height
+        col.addView(tile, new LinearLayout.LayoutParams(w, h));
+        TextView name = Ui.text(this, "Allow file access", 15, R.color.bn_text_2, 700);   // under the tile like a game's name, but grey: it is not something to be proud of
+        name.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams nl = Ui.wrap();
+        nl.width = w;
+        nl.topMargin = dp(10);
+        col.addView(name, nl);
+        return col;
     }
 
     // ---- Settings page ----
@@ -274,22 +292,20 @@ public final class MainActivity extends Activity {
     }
 
     private void onResumeViews() {
-        if (accessCard != null) accessCard.setVisibility(Environment.isExternalStorageManager() ? View.GONE : View.VISIBLE);
-        bananas.setRunning(true);
+        if (gameBox != null && (accessCard != null) != !Environment.isExternalStorageManager()) refresh();   // granted or revoked since Home was built: the tile joins or leaves the shelf
         refreshSettings();
     }
 
-    /** The bananas stop while the screen is covered (a game, the self-test, settings) or off */
+    /** Pauses work while the screen is covered (a game, the self-test, settings) or off */
     @Override protected void onPause() {
         resumed = false;
-        bananas.setRunning(false);
         Ondevice.pause(this);
         super.onPause();
     }
 
     private int dp(int v) { return Math.round(v * getResources().getDisplayMetrics().density); }
 
-    /** Home's games: a heading with Add game over one card per game (also over no card while a game is being prepared); with none, a single card that says what to do */
+    /** Home's shelf: one card per game, Add game as the last tile, and the file-access tile first while that access is missing */
     void refresh() {
         games.clear();
         games.addAll(Game.load(this));
@@ -299,76 +315,176 @@ public final class MainActivity extends Activity {
             new Thread(() -> { if (Game.collapse(this)) runOnUiThread(() -> { if (!isFinishing()) refresh(); }); }, "nx-list-merge").start();
         }
         gameBox.removeAllViews();
-        if (games.isEmpty() && !Ondevice.showing()) { gameBox.addView(emptyCard()); return; }
-        // while a game is being prepared its card says what happens (the steps card would only repeat it), and the heading's Add game still adds another game
-        LinearLayout top = Ui.row(this);
-        TextView h = Ui.section(this, "Your games");
-        top.addView(h, Ui.weight());
-        Button add = Ui.button(this, "Add game", Ui.Kind.QUIET, v -> addGame());
-        add.setCompoundDrawablesRelativeWithIntrinsicBounds(Ui.icon(this, R.drawable.ic_add, R.color.bn_accent), null, null, null);
-        add.setCompoundDrawablePadding(dp(6));
-        top.addView(add);
-        gameBox.addView(top);
-        for (Game g : games) Ui.add(gameBox, gameCard(g), gameBox.getChildCount() == 1 ? 4 : Ui.GAP);
-    }
-
-    /** No game yet: the mark, the three steps, and Add game */
-    private View emptyCard() {
-        LinearLayout c = Ui.card(this);
-        c.setGravity(Gravity.CENTER_HORIZONTAL);
-        c.setPadding(dp(20), dp(28), dp(20), dp(20));
-        ImageView im = new ImageView(this);
-        im.setImageResource(R.drawable.anka_mark);
-        im.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-        c.addView(im, new LinearLayout.LayoutParams(dp(96), dp(96)));
-        TextView h = Ui.heading(this, "Add your game");
-        h.setGravity(Gravity.CENTER);
-        Ui.add(c, h, 12, Ui.wrap());
-        TextView t = Ui.small(this, Ondevice.available() ? "Pick your dump folder, the one with base/ (and updates/), or your game's .nup file."
-                : "Prepare the game once on a computer (the README's Install steps), copy the pack next to the dump, then pick your dump folder or .nup file.");
-        t.setGravity(Gravity.CENTER);
-        Ui.add(c, t, 6, Ui.wrap());
-        LinearLayout steps = Ui.row(this);
-        steps.setGravity(Gravity.CENTER);
-        String[] s = Ondevice.available() ? new String[] {"1  Pick dump", "2  Prepare", "3  Play"} : new String[] {"1  Prepare on PC", "2  Pick dump", "3  Play"};
-        for (int k = 0; k < s.length; k++) {
-            LinearLayout.LayoutParams lp = Ui.wrap();
-            if (k > 0) lp.leftMargin = dp(6);
-            TextView chip = Ui.chip(this, s[k]);
-            chip.setSingleLine(true);
-            steps.addView(chip, lp);
+        accessCard = null;
+        // while a game is being prepared its card says what happens (the steps card would only repeat it); Add game is the last card of the shelf,
+        // and with no game at all it is the shelf's only card (the empty state is just the plus tile, the same one the shelf shows)
+        HorizontalScrollView hs = new HorizontalScrollView(this);   // the games side by side, console style: box-art tiles in a row you scroll sideways
+        hs.setHorizontalScrollBarEnabled(false);
+        hs.setClipToPadding(false);
+        hs.setPadding(dp(10), dp(14), dp(10), dp(14));   // the raised (scaled) card spills past the row: a ScrollView clips to its bounds, so give it room inside
+        hs.setClipChildren(false);   // the selected card grows a little: do not clip it
+        hs.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setClipChildren(false);
+        hs.addView(row);
+        LinearLayout.LayoutParams hpl = Ui.fill();
+        hpl.topMargin = dp(2);
+        gameBox.addView(hs, hpl);
+        if (!Environment.isExternalStorageManager()) {   // the file-access request is a tile of the shelf, beside the plus, not a banner across the page
+            accessCard = accessCard();
+            row.addView(accessCard, Ui.wrap());
         }
-        Ui.add(c, steps, 16, Ui.wrap());
-        Ui.add(c, Ui.action(this, R.drawable.ic_add, "Add game", Ui.Kind.PRIMARY, v -> addGame()), 20);
-        return c;
+        for (Game g : games) {
+            LinearLayout.LayoutParams lp = Ui.wrap();
+            if (row.getChildCount() > 0) lp.leftMargin = dp(18);
+            row.addView(gameCard(g), lp);
+        }
+        LinearLayout.LayoutParams apl = Ui.wrap();
+        apl.leftMargin = row.getChildCount() > 0 ? dp(18) : 0;
+        row.addView(addCard(), apl);
+        if (row.getChildCount() > 1) {   // the first game starts selected, like the console shelf (the access tile is not a card: skip to the first focusable one)
+            View first = null;
+            for (int k = 0; k < row.getChildCount(); k++)
+                if (row.getChildAt(k).isFocusable()) { first = row.getChildAt(k); break; }
+            if (first != null) hs.post(first::requestFocus);
+        }
     }
 
-    /** A game's card: its tile, name and state, ⋯ Manage at the top right (far from the big button), and one big button: Play, or Prepare when the pack does not fit */
+    /** The shelf's last card: a plus tile that adds a game */
+    private View addCard() {
+        int w = dp(146), h = dp(166);
+        LinearLayout col = new LinearLayout(this);
+        col.setOrientation(LinearLayout.VERTICAL);
+        col.setGravity(Gravity.CENTER_HORIZONTAL);
+        FrameLayout tile = new FrameLayout(this);
+        tile.setBackground(Ui.round(Ui.col(this, R.color.bn_card), dp(14), Ui.col(this, R.color.bn_card_stroke), dp(1)));
+        tile.setClipToOutline(true);
+        tile.setElevation(dp(3));   // the same light shadow as the game tiles
+        ImageView plus = new ImageView(this);
+        plus.setImageResource(R.drawable.ic_add);
+        plus.setColorFilter(Ui.col(this, R.color.bn_text_2));   // a soft grey plus (not the blue accent): the plus tile should not shout
+        plus.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        tile.addView(plus, new FrameLayout.LayoutParams(dp(44), dp(44), Gravity.CENTER));
+        col.addView(tile, new LinearLayout.LayoutParams(w, h));   // the plus tile is the size of a game card
+        col.setContentDescription("Add game");
+        TextView name = Ui.text(this, "Add game", 15, R.color.bn_text, 700);
+        name.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams nl = Ui.wrap();
+        nl.width = w;
+        nl.topMargin = dp(10);
+        col.addView(name, nl);
+        col.setClickable(true);
+        col.setFocusable(true);
+        col.setOnClickListener(v -> addGame());
+        return col;
+    }
+
+    /**
+     * A game's card in the row: a box-art tile — its icon.jpg (the pack's, or one dropped beside the dump / .nup) over the blue-gradient letter when there is
+     * none — its name and state under it, and ⋯ Manage at the tile's corner. Tapping the card is the big button (Play, or Prepare when the pack does not fit);
+     * a long press opens Manage.
+     */
     private View gameCard(Game g) {
-        LinearLayout c = Ui.card(this);
-        c.setPadding(dp(16), dp(16), dp(16), dp(16));
-        LinearLayout top = Ui.row(this);
-        top.addView(Ui.tile(this, g.name, 64));
-        LinearLayout info = new LinearLayout(this);
-        info.setOrientation(LinearLayout.VERTICAL);
-        info.setPadding(dp(14), 0, dp(4), 0);
-        TextView name = Ui.text(this, g.name, 19, R.color.bn_text, 700);
+        int w = dp(146), h = dp(166);
+        LinearLayout col = new LinearLayout(this);
+        col.setOrientation(LinearLayout.VERTICAL);
+        col.setGravity(Gravity.CENTER_HORIZONTAL);
+        FrameLayout tile = new FrameLayout(this);
+        tile.setBackground(Ui.round(0xFF000000, dp(14), 0, 0));   // opaque so its rounded outline casts a shadow; the art covers it fully
+        tile.setClipToOutline(true);
+        tile.setElevation(dp(4));   // the light shadow under the image (Console Shelf style)
+        tile.addView(Ui.tile(this, g.name, 146), new FrameLayout.LayoutParams(w, h));
+        ImageView art = new ImageView(this);
+        art.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        art.setVisibility(View.GONE);   // the letter tile shows until the art decodes
+        art.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        tile.addView(art, new FrameLayout.LayoutParams(w, h));
+        ImageView more = Ui.more(this, "Manage " + g.name, v -> manage(g));
+        more.setFocusable(false);   // the card is the focusable unit; ⋯ stays a touch target
+        FrameLayout.LayoutParams mp = new FrameLayout.LayoutParams(dp(38), dp(38), Gravity.TOP | Gravity.END);
+        mp.topMargin = dp(4);
+        mp.rightMargin = dp(4);
+        tile.addView(more, mp);
+        col.addView(tile, Ui.wrap());
+        TextView name = Ui.text(this, g.name, 15, R.color.bn_text, 700);
         name.setMaxLines(2);
         name.setEllipsize(TextUtils.TruncateAt.END);
-        info.addView(name);
+        name.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams nl = Ui.wrap();
+        nl.width = w;
+        nl.topMargin = dp(10);
+        col.addView(name, nl);
         boolean other = Profile.of(g.titleId) == null;   // no profile in this APK: it cannot run here (Profile.missing says why)
         TextView st = other ? Ui.status(this, "Not supported", R.color.bn_danger) : Ui.status(this, "Checking…", R.color.bn_text_2);
-        LinearLayout.LayoutParams sp = Ui.wrap();
-        sp.topMargin = dp(2);
-        info.addView(st, sp);
-        top.addView(info, Ui.weight());
-        top.addView(Ui.more(this, "Manage " + g.name, v -> manage(g)));
-        c.addView(top);
+        LinearLayout.LayoutParams sl = Ui.wrap();
+        sl.topMargin = dp(2);
+        col.addView(st, sl);
         Ui.Action play = Ui.action(this, R.drawable.ic_play, "Play", Ui.Kind.PRIMARY, v -> launch(g));
-        Ui.add(c, play, 16);
-        if (!other) check(g, st, play, info);
-        c.setOnLongClickListener(v -> { manage(g); return true; });
-        return c;
+        play.setVisibility(View.GONE);   // the card itself is the button; check() keeps this one's label and action for the tap
+        col.addView(play, new LinearLayout.LayoutParams(0, 0));
+        loadArt(g, art);
+        if (!other) check(g, st, play, col);
+        col.setClickable(true);
+        col.setFocusable(true);
+        col.setFocusableInTouchMode(true);   // so one card holds the selection even before a gamepad is used
+        // the focused card is the selected one: a deeper shadow and a small raise, like the console shelf this copies (no ring)
+        col.setDefaultFocusHighlightEnabled(false);   // no system highlight box around the whole card
+        col.setOnFocusChangeListener((v, focused) -> {
+            tile.animate().translationZ(focused ? dp(8) : 0f).setDuration(130).start();
+            col.animate().scaleX(focused ? 1.06f : 1f).scaleY(focused ? 1.06f : 1f).setDuration(130).start();
+        });
+        col.setOnClickListener(v -> play.performClick());
+        col.setOnLongClickListener(v -> { manage(g); return true; });
+        return col;
+    }
+
+    /** Decoded card art, keyed by file (the row re-decodes on every refresh otherwise) */
+    private static final android.util.LruCache<String, android.graphics.Bitmap> ART = new android.util.LruCache<>(16);
+
+    /**
+     * The game's box art, decoded off the main thread. In order: <dump folder>/icon.jpg, a JPG beside a .nup named after it (<name>.jpg) or after its
+     * title ID (<title ID>.jpg) — box art the user drops in — and the pack's own icon.jpg (a PC pack copies the icon nx_extract read from the control data).
+     */
+    private void loadArt(Game g, ImageView art) {
+        File gd = new File(g.gameDir);
+        File side;
+        if (Nup.isNup(gd)) {
+            String stem = gd.getName().substring(0, gd.getName().length() - 4);
+            File dir = gd.getParentFile();
+            side = null;
+            for (String cand : new String[] {stem + ".jpg", stem + ".png", g.titleId + ".jpg", g.titleId + ".png"}) {   // the box art the user drops in, JPG or PNG
+                File t = new File(dir, cand);
+                if (t.isFile()) { side = t; break; }
+            }
+        } else {
+            File inDump = new File(gd, "icon.jpg");
+            side = inDump.isFile() ? inDump : null;
+        }
+        File inPack = new File(g.packDir, "icon.jpg");
+        File f = side != null && side.isFile() ? side : (inPack.isFile() ? inPack : null);
+        if (f == null) return;
+        String key = f.getAbsolutePath();
+        android.graphics.Bitmap have = ART.get(key);
+        if (have != null) { art.setImageBitmap(have); art.setVisibility(View.VISIBLE); return; }
+        new Thread(() -> {
+            android.graphics.Bitmap b = decodeArt(f);
+            if (b == null) return;
+            ART.put(key, b);
+            runOnUiThread(() -> { art.setImageBitmap(b); art.setVisibility(View.VISIBLE); });
+        }, "nx-art").start();
+    }
+
+    private static android.graphics.Bitmap decodeArt(File f) {
+        android.graphics.BitmapFactory.Options o = new android.graphics.BitmapFactory.Options();
+        o.inJustDecodeBounds = true;
+        android.graphics.BitmapFactory.decodeFile(f.getPath(), o);
+        if (o.outWidth <= 0) return null;
+        o.inSampleSize = 1;
+        while (o.outWidth / (o.inSampleSize * 2) >= 640) o.inSampleSize *= 2;   // the tile is small: keep a few times its width, no more
+        o.inJustDecodeBounds = false;
+        try { return android.graphics.BitmapFactory.decodeFile(f.getPath(), o); }
+        catch (OutOfMemoryError e) { return null; }
     }
 
     /** Why a game cannot start as it is, in a few words (unfinished or busy pack code, another game build, no current shader library), and whether Prepare fixes it */
