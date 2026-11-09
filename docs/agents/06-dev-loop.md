@@ -13,7 +13,7 @@ One page for people and agents: the tools this repository has for building, runn
 | Rebuild only the shaders | `DM_GAME=<id> dm/gfx/tools/dmsh_build.py` (after a chain change: `dmsh_chain.py --header` first) | the chain procedure in [AGENTS.md](../../AGENTS.md); [04](04-graphics.md) |
 | Run with scripted input | `DM_KEYS` (button presses at fixed seconds or frames), `DM_CTL` (presses, screenshots and dumps while it runs), `DM_REC` (records what the player does as `DM_KEYS` steps, to replay a bug report's path or make a route) | [05, Scripted input](05-debugging.md#scripted-input-and-thread-scheduling) |
 
-Start Mac runs with the Metal performance HUD (`DM_METAL_HUD=1`). A new title starts from the [checklist](README.md#checklist-for-a-new-title) and [03](03-bringup.md).
+Start Mac runs with the Metal performance HUD (`DM_METAL_HUD=1`). A new title starts from the [checklist](README.md#checklist-para-um-novo-titulo) and [03](03-bringup.md).
 
 ## 2. When something is wrong
 

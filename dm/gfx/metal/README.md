@@ -1,58 +1,58 @@
-# dm/gfx/metal — minimal Metal offscreen example
+# dm/gfx/metal — exemplo mínimo offscreen de Metal
 
-A standalone small module: it wraps Metal in a pure C interface, renders the picture to an offscreen texture and reads it back to the CPU, without putting anything on screen. It is not compiled into the host (`dm/host/Makefile` does not include this directory); the Metal replay layer the game actually uses is in `../nvn/nvn_mtl.m`. This is kept as a reference that compiles on its own and can be understood in a few dozen lines, and as a small probe for verifying Metal behavior.
+Um módulo pequeno e autônomo: ele envolve o Metal numa interface pura em C, renderiza a imagem para uma textura offscreen e a lê de volta para a CPU, sem pôr nada na tela. Não é compilado no host (o `dm/host/Makefile` não inclui este diretório); a camada de replay do Metal que o jogo realmente usa está em `../nvn/nvn_mtl.m`. Isto é mantido como referência que compila sozinha e pode ser entendida em poucas dezenas de linhas, e como uma pequena sonda para verificar o comportamento do Metal.
 
 ## Interface (`mtl_backend.h`)
 
-| Interface | Effect |
+| Interface | Efeito |
 |---|---|
-| `mtlb_init()` / `mtlb_shutdown(ctx)` | Create / release the context: device, command queue, the current frame's command buffer, pipeline cache |
-| `mtlb_target(ctx, w, h, fmt)` / `mtlb_target_free(rt)` | Create / release an offscreen render target, with format `MTLB_FMT_BGRA8` or `MTLB_FMT_RGBA8` |
-| `mtlb_clear(ctx, rt, r, g, b, a)` | Records a render pass into the current frame that clears the target to the given color |
-| `mtlb_triangle(ctx, rt)` | Records another render pass into the current frame (keeping existing contents) that draws a three-color triangle |
-| `mtlb_readback(ctx, rt, buf, size)` | Submits the current frame, waits for the GPU to complete, and reads the pixels back into `buf` tightly packed by row (row 0 is the top of the image) |
+| `mtlb_init()` / `mtlb_shutdown(ctx)` | Cria / libera o contexto: dispositivo, fila de comandos, command buffer do quadro atual, cache de pipelines |
+| `mtlb_target(ctx, w, h, fmt)` / `mtlb_target_free(rt)` | Cria / libera um render target offscreen, com formato `MTLB_FMT_BGRA8` ou `MTLB_FMT_RGBA8` |
+| `mtlb_clear(ctx, rt, r, g, b, a)` | Registra no quadro atual um render pass que limpa o target para a cor dada |
+| `mtlb_triangle(ctx, rt)` | Registra no quadro atual outro render pass (mantendo o conteúdo existente) que desenha um triângulo tricolor |
+| `mtlb_readback(ctx, rt, buf, size)` | Submete o quadro atual, espera o GPU terminar e lê os pixels de volta para `buf` compactados por linha (linha 0 é o topo da imagem) |
 
-Functions return 0 for success and -1 for failure, and the failure reason is printed to standard error. The implementation is in `mtl_backend.m` (Objective-C, ARC).
+As funções retornam 0 para sucesso e -1 para falha, e o motivo da falha é impresso no erro padrão. A implementação está em `mtl_backend.m` (Objective-C, ARC).
 
-Design points:
+Pontos de projeto:
 
-- **One command buffer per frame**: it is created only when a pass is first recorded; subsequent clears and triangles are appended to the same command buffer, and it is submitted only at readback.
-- **Render targets are not global variables**: the context and each target are opaque pointers.
-- **Storage mode is Shared**: on unified-memory devices a Shared texture can be used directly as a render attachment, and after the GPU completes the CPU reads it directly, with no intermediate buffer needed. On non-unified-memory devices `mtlb_init` reports an error outright.
-- The triangle's shader is inline MSL, compiled at run time.
+- **Um command buffer por quadro**: ele é criado apenas quando um pass é registrado pela primeira vez; as limpezas e o triângulo seguintes são acrescentados ao mesmo command buffer, e ele só é submetido no readback.
+- **Render targets não são variáveis globais**: o contexto e cada target são ponteiros opacos.
+- **Modo de armazenamento é Shared**: em dispositivos de memória unificada uma textura Shared pode ser usada diretamente como anexo de render, e depois que o GPU termina a CPU a lê diretamente, sem buffer intermediário. Em dispositivos de memória não unificada `mtlb_init` reporta erro logo no início.
+- O shader do triângulo é MSL inline, compilado em tempo de execução.
 
-## Building and running
+## Compilação e execução
 
 ```sh
-make -C dm/gfx/metal        # produces test_offscreen
-make -C dm/gfx/metal run    # runs the self-test; exit code 0 means all passed
+make -C dm/gfx/metal        # produz test_offscreen
+make -C dm/gfx/metal run    # roda o autoteste; código de saída 0 significa que tudo passou
 make -C dm/gfx/metal clean
 ```
 
-Only Xcode's command-line tools are needed; no game files are needed. The build products are already listed in this directory's `.gitignore`.
+Só são necessárias as ferramentas de linha de comando do Xcode; nenhum arquivo de jogo é necessário. Os produtos da compilação já estão listados no `.gitignore` deste diretório.
 
-## Self-test (`test_offscreen.c`)
+## Autoteste (`test_offscreen.c`)
 
-All expected values are computed independently in the test, without reading the backend's internal data:
+Todos os valores esperados são calculados de forma independente no teste, sem ler dados internos do backend:
 
-- the triangle vertices are copied separately in the test;
-- normalized coordinates are converted to pixels: `px = (x + 1) / 2 · W`, `py = (1 − y) / 2 · H`;
-- the color at a pixel center is the linear interpolation of the three vertex colors by barycentric coordinates.
+- os vértices do triângulo são copiados separadamente no teste;
+- coordenadas normalizadas são convertidas em pixels: `px = (x + 1) / 2 · W`, `py = (1 − y) / 2 · H`;
+- a cor no centro de um pixel é a interpolação linear das três cores de vértice por coordenadas baricêntricas.
 
-The two tests are each run once for both formats, BGRA8 and RGBA8:
+Os dois testes são executados uma vez para cada formato, BGRA8 e RGBA8:
 
-1. Clear to a solid color and compare pixel by pixel.
-2. Clear the screen and then draw the triangle: pixels inside the triangle (more than 1 pixel from an edge) are compared with the interpolated value, with the tolerance given by `TOL` in the source; pixels outside are compared with the clear color; the 1-pixel band right along the edges is skipped, since rasterization edge rules are outside the scope of this test.
+1. Limpar para uma cor sólida e comparar pixel a pixel.
+2. Limpar a tela e depois desenhar o triângulo: pixels dentro do triângulo (a mais de 1 pixel de uma borda) são comparados com o valor interpolado, com a tolerância dada por `TOL` no código-fonte; pixels fora são comparados com a cor de limpeza; a faixa de 1 pixel exatamente sobre as bordas é pulada, pois as regras de borda da rasterização estão fora do escopo deste teste.
 
-Before readback the buffer is first filled with 0x5a, to prevent "passing even though the backend wrote nothing".
+Antes do readback o buffer é primeiro preenchido com 0x5a, para evitar "passar mesmo que o backend não tenha escrito nada".
 
-## Probe (`probe/p_nocopy.m`)
+## Sonda (`probe/p_nocopy.m`)
 
-A single-file program with no build target; compile it manually with clang when needed. It verifies one thing that the replay layer's memory pool approach depends on: on a piece of memory that is not page-aligned, after extending its start and end outward to page boundaries, a zero-copy `MTLBuffer` can be created; two such buffers are allowed to overlap; and what the GPU writes can be read by the CPU through the original pointer.
+Um programa de arquivo único, sem alvo de build; compile-o manualmente com clang quando precisar. Ele verifica uma coisa da qual a abordagem de memory pools da camada de replay depende: num pedaço de memória não alinhado a página, depois de estender seu início e seu fim para fora até os limites de página, um `MTLBuffer` zero-copy pode ser criado; dois desses buffers podem se sobrepor; e o que o GPU escreve pode ser lido pela CPU através do ponteiro original.
 
-## Limitations
+## Limitações
 
-- The triangle vertices are hard-coded in `mtl_backend.m`; there is no configurable state such as vertex buffers, shaders or viewports.
-- `mtlb_readback` waits synchronously for the whole frame to complete and blocks the calling thread.
-- Only a single color attachment and two 8-bit formats are supported; there is no depth / stencil, multisampling or multiple attachments.
-- Not thread-safe; only unified-memory devices are supported.
+- Os vértices do triângulo são fixos no código de `mtl_backend.m`; não há estado configurável como vertex buffers, shaders ou viewports.
+- `mtlb_readback` espera sincronicamente o quadro inteiro terminar e bloqueia a thread chamadora.
+- Só um único anexo de cor e dois formatos de 8 bits são suportados; não há depth / stencil, multiamostragem nem múltiplos anexos.
+- Não é thread-safe; apenas dispositivos de memória unificada são suportados.

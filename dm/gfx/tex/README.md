@@ -1,48 +1,48 @@
-# dm/gfx/tex — texture format mapping, block-linear deswizzling, BC decompression
+# dm/gfx/tex — mapeamento de formatos de textura, deswizzling block-linear, descompressão BC
 
-The part of the graphics layer that deals with texture data, called by the replay layer `../nvn/nvn_mtl.m`. It does three things:
+A parte da camada gráfica que lida com dados de textura, chamada pela camada de replay `../nvn/nvn_mtl.m`. Ela faz três coisas:
 
-1. converts NVN texture format numbers to Metal pixel formats;
-2. unpacks the Switch's "block-linear" layout into an ordinary row-by-row layout;
-3. decompresses BC textures on GPUs that do not support BC compressed textures.
+1. converte números de formato de textura NVN para formatos de pixel Metal;
+2. desempacota o layout "block-linear" do Switch para um layout comum, linha por linha;
+3. descomprime texturas BC em GPUs que não suportam texturas comprimidas BC.
 
-Block linear is how the Tegra X1 GPU stores textures: the data is not one row after another, but interleaved in small blocks of 64 bytes × 8 rows (GOBs), and several GOBs are then stacked into larger blocks according to a "block height" and a "block depth". The game's packaged texture files are in exactly this layout, and it must be undone before uploading to Metal.
+Block linear é como o GPU Tegra X1 armazena texturas: os dados não ficam um após o outro por linha, mas entrelaçados em blocos pequenos de 64 bytes × 8 linhas (GOBs), e vários GOBs são então empilhados em blocos maiores conforme um "block height" e uma "block depth". Os arquivos de textura empacotados do jogo estão exatamente nesse layout, e ele precisa ser desfeito antes do upload para o Metal.
 
-## Files
+## Arquivos
 
-| File | Contents |
+| Arquivo | Conteúdo |
 |---|---|
-| `nvn_fmt_mtl.h`, `nvn_fmt_mtl.c` | `nvn_fmt_to_mtl()`: NVN format (0x01–0x9C) → Metal pixel format + component remapping. Returns 1 for an exact match, 2 for a substitute (precision, bit order or interpretation differs and a conversion is needed), 0 when Metal has no corresponding format. How each format is handled is written in the comments inside the table. Pure C, no dependency on Metal headers |
-| `nvn_deswizzle.h`, `nvn_deswizzle.c` | `nvn_deswizzle()`: deswizzles one level and one layer from block linear to linear; `nvn_swizzle()`: the reverse, used for round trips in unit tests; `nvn_bl_offset()`: the block-linear address of a single point. Pure C |
-| `nvn_deswizzle_gpu.h`, `nvn_deswizzle_gpu.m` | A Metal compute shader version of the same deswizzling algorithm, used by the replay layer when uploading packaged textures; when initialization fails or an unsupported format is encountered, the replay layer falls back to the CPU version |
-| `tests/` | Unit tests |
+| `nvn_fmt_mtl.h`, `nvn_fmt_mtl.c` | `nvn_fmt_to_mtl()`: formato NVN (0x01–0x9C) → formato de pixel Metal + remapeamento de componentes. Retorna 1 para correspondência exata, 2 para um substituto (precisão, ordem de bits ou interpretação diferem e uma conversão é necessária), 0 quando o Metal não tem formato correspondente. Como cada formato é tratado está escrito nos comentários dentro da tabela. C puro, sem dependência de cabeçalhos do Metal |
+| `nvn_deswizzle.h`, `nvn_deswizzle.c` | `nvn_deswizzle()`: deswizzles um nível e uma camada de block linear para linear; `nvn_swizzle()`: o inverso, usado para round trips nos testes de unidade; `nvn_bl_offset()`: o endereço block-linear de um único ponto. C puro |
+| `nvn_deswizzle_gpu.h`, `nvn_deswizzle_gpu.m` | Uma versão em compute shader de Metal do mesmo algoritmo de deswizzling, usada pela camada de replay ao fazer upload de texturas empacotadas; quando a inicialização falha ou um formato não suportado é encontrado, a camada de replay recorre à versão em CPU |
+| `tests/` | Testes de unidade |
 
-The offsets of each level and layer within the storage, and the block height and block depth actually used by each level, are all taken from `../nvn/nvn_tex.c` (`nvn_tex_layout`, `nvn_tex_level_offset`, `nvn_tex_level_tiles`); this directory only does addressing and moving within a level. Packaged parameters override the automatic block dimensions: [Packaged texture block dimensions and linear storage rows](../../../docs/reference/nvn-objects.md#packaged-texture-block-dimensions-and-linear-storage-rows).
+Os offsets de cada nível e camada dentro do armazenamento, e o block height e a block depth realmente usados por cada nível, vêm todos de `../nvn/nvn_tex.c` (`nvn_tex_layout`, `nvn_tex_level_offset`, `nvn_tex_level_tiles`); este diretório só faz endereçamento e movimentação dentro de um nível. Parâmetros empacotados sobrescrevem as dimensões de bloco automáticas: [Dimensões de bloco e linhas de armazenamento linear de texturas empacotadas](../../../docs/reference/nvn-objects.md#packaged-texture-block-dimensions-and-linear-storage-rows).
 
-## BC textures
+## Texturas BC
 
-Only GPUs with BC compressed textures are supported (`supportsBCTextureCompression` of `MTLDevice`: Apple silicon Macs and the latest iPhones), so BC textures are created and uploaded as BC; there is no decompression path. A device without them is refused at start ([GPUs without BC textures](../../../docs/reference/rendering.md#gpus-without-bc-textures-are-refused-at-start)). A BC texture is never a render target and its raw blocks are not sampled through an uncompressed view (Metal has no such views; Breath of the Wild encodes one 32×32 BC4 texture on the GPU, GitHub issue #4).
+Só GPUs com texturas comprimidas BC são suportadas (`supportsBCTextureCompression` do `MTLDevice`: Macs com Apple silicon e os iPhones mais recentes), então texturas BC são criadas e carregadas como BC; não há caminho de descompressão. Um dispositivo sem elas é recusado no início ([GPUs sem texturas BC](../../../docs/reference/rendering.md#gpus-without-bc-textures-are-refused-at-start)). Uma textura BC nunca é um render target e seus blocos brutos não são amostrados através de uma view não comprimida (o Metal não tem views assim; Breath of the Wild codifica uma textura BC4 32×32 no GPU, GitHub issue #4).
 
-## Tests
+## Testes
 
 ```sh
-make -C dm/gfx/tex/tests run       # run t_fmt_mtl and t_tex
+make -C dm/gfx/tex/tests run       # roda t_fmt_mtl e t_tex
 ```
 
-- **`t_fmt_mtl`**: takes the mapping for every NVN format in 0x01–0x9C and, for every one whose mapping is not 0, actually creates a texture on the local Metal device; all of them must be created successfully. It also checks that every NVN format with sRGB in its name lands on a Metal sRGB format. No game files needed.
-- **`t_tex`**: the deswizzling tests, in several groups:
+- **`t_fmt_mtl`**: pega o mapeamento de todo formato NVN em 0x01–0x9C e, para cada um cujo mapeamento não é 0, cria de fato uma textura no dispositivo Metal local; todas devem ser criadas com sucesso. Também verifica que todo formato NVN com sRGB no nome caia num formato sRGB do Metal. Não precisa de arquivos de jogo.
+- **`t_tex`**: os testes de deswizzling, em vários grupos:
 
-  | Group | Criterion |
+  | Grupo | Critério |
   |---|---|
-  | A round trip | Writes random data into each level and layer and reads it back out; must be byte-for-byte equal. Covers 2D, 2D array and 3D, several bytes-per-block values and non-power-of-two sizes |
-  | B address formula | The result of `nvn_bl_offset()` equals the address computed by hand from the public layout rules |
-  | D differential copies | Both copy directions match a byte-address oracle for 1,029 deterministic layouts, including padded pitches, byte tails, sparse mip tails, packaged block dimensions, arrays and cubes; untouched storage and row padding are compared too |
-  | E hand-made 3D | Places markers at hand-computed addresses, checks where they land after deswizzling, and checks block height, block depth and storage size |
+  | A round trip | Escreve dados aleatórios em cada nível e camada e os lê de volta; devem ser byte por byte iguais. Cobre 2D, array 2D e 3D, vários valores de bytes por bloco e tamanhos que não são potência de dois |
+  | B fórmula de endereço | O resultado de `nvn_bl_offset()` é igual ao endereço calculado à mão pelas regras públicas do layout |
+  | D cópias diferenciais | Ambos os sentidos de cópia coincidem com um oráculo de endereço de byte para 1.029 layouts determinísticos, incluindo pitches com padding, sobras de bytes, sobras de mip esparsas, dimensões de bloco empacotadas, arrays e cubes; armazenamento intocado e padding de linha também são comparados |
+  | E 3D feito à mão | Coloca marcadores em endereços calculados à mão, verifica onde caem após o deswizzling, e confere block height, block depth e tamanho de armazenamento |
 
-  The A round trip can only prove "one-to-one and within bounds"; it cannot prove that the layout formula is right. What backs it up is the hand-computed addresses of groups B and E, and the games that render right.
+  O round trip A só pode provar "um-para-um e dentro dos limites"; não pode provar que a fórmula do layout esteja certa. O que a sustenta são os endereços calculados à mão dos grupos B e E, e os jogos que renderizam certo.
 
-## Limitations
+## Limitações
 
-- `nvn_deswizzle()` does not support multisampled textures, textures with the LINEAR flag (which are linear to begin with) or the BUFFER target; it returns -1 when it encounters them.
-- Cubes and cube arrays are handled as layered textures.
-- The component bit order of the 16-bit packed formats (565 / 5551 / 4444) is mapped according to the format names and has not been checked with real data; they are marked as "substitute" in the format table.
+- `nvn_deswizzle()` não suporta texturas multiamostradas, texturas com a flag LINEAR (que já são lineares) nem o target BUFFER; retorna -1 quando os encontra.
+- Cubes e arrays de cube são tratados como texturas em camadas.
+- A ordem de bits dos componentes dos formatos compactados de 16 bits (565 / 5551 / 4444) é mapeada conforme os nomes dos formatos e não foi conferida com dados reais; estão marcados como "substituto" na tabela de formatos.

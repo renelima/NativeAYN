@@ -98,14 +98,14 @@ You get a Mac app, with no icon because the folder holds none. iPhone and iPad a
 
 ## Games
 
-Games tested on Mac or iPhone. See the [per-game notes](../dm/games/README.md#games) for tested platforms, progress and known issues:
+Games tested on Mac or iPhone. See the [per-game notes](../dm/games/README.md#jogos) for tested platforms, progress and known issues:
 
 Needs iOS / iPadOS 26 or later on an iPhone 15 Pro or newer (A17 Pro chip or later) or an iPad with an M1 chip or later: the games' textures are BC-compressed, and older iPhones can't read that format. Other games aren't supported yet. For them the script writes a survey and still tries its best to pack an IPA, guessing the game's settings; such an IPA may not start.
 
 
 ### For developers
 
-[How it works](../docs/development.md) · [Game notes](../dm/games/README.md#games) · [Bring-up and debugging](../docs/agents/README.md) · [Front ends](../docs/frontends.md) · [Contributing](../CONTRIBUTING.md)
+[How it works](../docs/development.md) · [Game notes](../dm/games/README.md#jogos) · [Bring-up and debugging](../docs/agents/README.md) · [Front ends](../docs/frontends.md) · [Contributing](../CONTRIBUTING.md)
 
 ### License
 

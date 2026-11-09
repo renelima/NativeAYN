@@ -1,21 +1,21 @@
-# Subsystem references
+# Referências por subsistema
 
-How the host meets each part of a Switch game, and every failure met so far, one entry per mechanism: symptom, cause, fix (file and function), the games it was found on (linked to their notes in `dm/games/<id>/README.md`). Start from the [symptom index](../agents/symptoms.md) when you have a log line or a visible result; the workflows that lead here are in [docs/agents](../agents/README.md).
+Como o host atende cada parte de um jogo de Switch, e todas as falhas encontradas até hoje, uma entrada por mecanismo: sintoma, causa, correção (arquivo e função), os jogos em que foi encontrada (com link para as notas em `dm/games/<id>/README.md`). Comece pelo [índice de sintomas](../agents/symptoms.md) quando tiver uma linha de log ou um resultado visível; os fluxos de trabalho que levam até aqui estão em [docs/agents](../agents/README.md).
 
-| File | Covers |
+| Arquivo | Cobre |
 |---|---|
-| [packing.md](packing.md) | NSP script, compressed inputs and build artifacts |
-| [rewriter.md](rewriter.md) | The NSO rewriter `patch_nso.py`: jump tables, exclusive windows, patch area reach, cuts and observation gates (and cheats carried across builds with the same matcher), functions without unwind entries, stack and system registers, relocations |
-| [memory.md](memory.md) | Guest layout, heap and application pool, virtual address memory and the alias region (the SDK's node area), engine allocators, mapping SVCs, running out of memory |
-| [threads.md](threads.md) | Thread creation and cores, address arbitration, yields and spin waits, events |
-| [services.md](services.md) | SDK calls and system services: sm connections, names that changed between SDKs, file system and saves, add-on content, input, keyboard and applets, display and operation mode, accounts and network, settings and fonts, C library and time, modules |
-| [movies.md](movies.md) | The SDK's movie library: decoder lifecycle, output slots, native-texture output, demuxers and codecs, game movie players |
-| [audio.md](audio.md) | The audio renderer and its command lists by SDK, AudioOut and devices, codecs, timing |
-| [frame-rate.md](frame-rate.md) | The host's frame step, engine frame limiters, present intervals and display rates, CPU cost |
-| [nvn-objects.md](nvn-objects.md) | NVN object sizes, memory pools, command memory, queues and syncs, CPU-written textures, NVN entry points |
-| [rendering.md](rendering.md) | The replay on Metal: textures, passes and clears, blend / depth / stencil, vertex input, uniforms and ordering, conditional rendering; the Vulkan and OpenGL layers |
-| [shaders.md](shaders.md) | Shader containers by engine, control sections and code, translation, bindings and handles, shaders compiled at run time, pipelines and caches |
-| [cheats.md](cheats.md) | How cheats work on a Switch with Atmosphère (dmnt, the file, the VM, its behaviour on failure) and where this host differs |
-| [game-state.md](game-state.md) | Saves, scripted state, and game behaviour that looks like a host bug but is not |
+| [packing.md](packing.md) | Script do NSP, entradas comprimidas e artefatos de build |
+| [rewriter.md](rewriter.md) | O rewriter de NSO `patch_nso.py`: jump tables, janelas exclusivas, alcance da área de patches, cuts e observation gates (e os truques carregados entre builds com o mesmo matcher), funções sem entrada de unwind, pilha e registradores de sistema, realocações |
+| [memory.md](memory.md) | Layout do convidado, heap e application pool, memória de endereço virtual e a região alias (a área de nós do SDK), aloca­dores de engine, SVCs de mapeamento, ficar sem memória |
+| [threads.md](threads.md) | Criação de threads e núcleos, arbitração de endereços, yields e spin waits, eventos |
+| [services.md](services.md) | Chamadas do SDK e serviços de sistema: conexões sm, nomes que mudaram entre SDKs, filesystem e saves, add-on content, input, teclado e applets, display e modo de operação, contas e rede, configurações e fontes, biblioteca C e tempo, módulos |
+| [movies.md](movies.md) | A biblioteca de filmes do SDK: ciclo de vida do decodificador, slots de saída, saída em textura nativa, demuxers e codecs, tocadores de filme dos jogos |
+| [audio.md](audio.md) | O audio renderer e suas command lists por SDK, AudioOut e dispositivos, codecs, temporização |
+| [frame-rate.md](frame-rate.md) | O frame step do host, limitadores de frame de engines, intervalos de present e taxas de display, custo de CPU |
+| [nvn-objects.md](nvn-objects.md) | Tamanhos de objetos NVN, pools de memória, memória de comando, filas e sincronizações, texturas escritas pela CPU, entry points do NVN |
+| [rendering.md](rendering.md) | O replay sobre Metal: texturas, passes e clears, blend / depth / stencil, entrada de vértices, uniforms e ordenação, renderização condicional; as camadas Vulkan e OpenGL |
+| [shaders.md](shaders.md) | Contêineres de shaders por engine, seções de controle e código, tradução, bindings e handles, shaders compilados em tempo de execução, pipelines e caches |
+| [cheats.md](cheats.md) | Como os cheats funcionam num Switch com Atmosphère (dmnt, o arquivo, a VM, seu comportamento em falha) e onde este host difere |
+| [game-state.md](game-state.md) | Saves, estado roteirizado e comportamento de jogo que parece bug do host mas não é |
 
-A new general finding goes into the file and section it belongs to, in the same form, with a line in the symptom index; a fact about one game goes into that game's note.
+Uma nova descoberta geral entra no arquivo e na seção a que pertence, no mesmo formato, com uma linha no índice de sintomas; um fato sobre um jogo entra na nota daquele jogo.

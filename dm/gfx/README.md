@@ -1,203 +1,203 @@
-# dm/gfx — graphics layer (NVN → Metal)
+# dm/gfx — camada gráfica (NVN → Metal)
 
-The Switch version of the game draws with NVN (the Switch's native graphics interface). The graphics layer reimplements this interface on top of Apple's Metal: every NVN call the game makes lands here, is recorded as a command, and is replayed as Metal commands at submit time. The game's shaders are not translated at run time; they are translated offline, once, on a computer, into Metal shader libraries (when the computer has no Apple Metal compiler, the final compile step moves to the phone; see below).
+A versão de Switch do jogo desenha com NVN (a interface gráfica nativa do Switch). A camada gráfica reimplementa essa interface sobre o Metal da Apple: toda chamada NVN que o jogo faz chega aqui, é registrada como um comando e é reproduzida como comandos Metal no momento da submissão. Os shaders do jogo não são traduzidos em tempo de execução; eles são traduzidos offline, uma vez, num computador, para bibliotecas de shader Metal (quando o computador não tem o compilador Metal da Apple, o passo final de compilação se muda para o celular; ver abaixo).
 
-For the build steps of the whole project see [README.md](../../README.md) and [docs/development.md](../../docs/development.md) (the tools they need: Xcode, xcodegen, .NET SDK, zstd, and the Python packages lz4 / capstone / fonttools; spirv-cross is the in-repo build `tools/spirv_cross_bin`); this page covers only the graphics layer's own matters.
+Para as etapas de build do projeto inteiro veja [README.md](../../README.md) e [docs/development.md](../../docs/development.md) (as ferramentas de que precisam: Xcode, xcodegen, .NET SDK, zstd, e os pacotes Python lz4 / capstone / fonttools; spirv-cross é o build no repositório `tools/spirv_cross_bin`); esta página cobre apenas os assuntos próprios da camada gráfica.
 
-## How it works
+## Como funciona
 
-### Taking over the NVN interface
+### Assumindo a interface NVN
 
-- The game's main program imports only one NVN symbol, `nvnBootstrapLoader`; all other NVN functions are obtained through it by name. The host forcibly takes over this import (`nvn/hle_nvn.c`), and not a single instruction of the original graphics driver is executed.
-- The game fetches the addresses of 523 names in total (`nvn/names.txt`). Each name has a thunk (`nvn/nvn_thunks.S`, a generated file): it first increments that function's call count and then jumps to the implementation.
-- The functions games call have implementations, according to NVN semantics or empty (`g_nops` in `hle_nvn.c`); the rest are connected to a red-reporting stub that, when called, prints `[RED] NVN unimplemented function called: <name>` in the log.
-- Every implementation gets a compile-time signature check against `nvn/nvn_protos.h` (a generated file). The calling conventions of Apple arm64 and the Switch differ for integer parameters narrower than 32 bits, so on the host side `NVNboolean` parameters are always received as `uint32_t` and only the low 8 bits are examined.
+- O programa principal do jogo importa apenas um símbolo NVN, `nvnBootstrapLoader`; todas as outras funções NVN são obtidas por nome através dele. O host toma esse import à força (`nvn/hle_nvn.c`), e nenhuma instrução do driver gráfico original é executada.
+- O jogo busca os endereços de 523 nomes no total (`nvn/names.txt`). Cada nome tem um thunk (`nvn/nvn_thunks.S`, um arquivo gerado): ele primeiro incrementa a contagem de chamadas daquela função e depois salta para a implementação.
+- As funções que os jogos chamam têm implementações, conforme a semântica do NVN, ou vazias (`g_nops` em `hle_nvn.c`); as demais estão ligadas a um stub de reporte vermelho que, quando chamado, imprime `[RED] NVN unimplemented function called: <name>` no log.
+- Cada implementação passa por uma checagem de assinatura em tempo de compilação contra `nvn/nvn_protos.h` (um arquivo gerado). As convenções de chamada do arm64 da Apple e do Switch diferem para parâmetros inteiros mais estreitos que 32 bits, então no lado do host os parâmetros `NVNboolean` são sempre recebidos como `uint32_t` e só os 8 bits baixos são examinados.
 
-### Two layers: record and replay
+### Duas camadas: gravação e replay
 
-- **Interface layer `nvn/hle_nvn.c`**: host-side objects are stored in place in the memory the game allocates for NVN objects; the layouts are in `nvn/nvn_obj.h`, and each has a static assertion guaranteeing it does not exceed NVN's reserved size. Commands are recorded into the command memory provided by the game, in the record format of `nvn_obj.h`.
-- **Replay layer `nvn/nvn_mtl.m`**: at submit time it replays the record stream as Metal commands.
-  - Memory pools are created as zero-copy `MTLBuffer`s, with the GPU address equal to the CPU address, so only unified-memory devices are supported.
-  - The visible effects of "GPU completion" (sync objects becoming ready, events writing their value, counters) happen only after the Metal command buffer has actually completed.
-  - Pipeline states and depth-stencil states are cached by state hash; at startup, shaders and pipelines are pre-built according to the warm-up manifests (the bundled seed `pso_manifest.tsv`, then this device's `pso_user.tsv`; see below): with a window, on every core before the game's first frame behind a "Preparing shaders" screen (docs/development.md, "The prepare step"), else in the background. A pipeline that fails to build is cached as failed and reported once with its shader keys.
-  - Render pipelines are made through `MTL4Compiler` from a base whose colour state is left unspecialized, one base per pipeline less its colour state, specialized per colour state; the bases are kept in the per-game pipeline archive (`pso_archive/` beside `pso_user.tsv`) and taken from it at the next start (`pso_build`; see docs/development.md, "Pipeline bases and the pipeline archive"). A draw whose pipeline is not built yet draws with its shader pair's pulling pipeline (no vertex descriptor) while its own is built in the background (docs/development.md, "Hybrid pipelines").
-  - The game's packaged textures are in Tegra block-linear layout and are deswizzled before upload (see `tex/README.md`).
-  - Presentation: the game's swapchain texture is drawn to a `CAMetalLayer`, and presentation timing is scheduled by the pacer in `nvn/nvn_pace.h`.
+- **Camada de interface `nvn/hle_nvn.c`**: os objetos do lado do host ficam armazenados no próprio lugar da memória que o jogo aloca para os objetos NVN; os layouts estão em `nvn/nvn_obj.h`, e cada um tem uma asserção estática garantindo que não excede o tamanho reservado do NVN. Os comandos são gravados na memória de comandos fornecida pelo jogo, no formato de registro de `nvn_obj.h`.
+- **Camada de replay `nvn/nvn_mtl.m`**: na submissão, reproduz o fluxo de registros como comandos Metal.
+  - Os memory pools são criados como `MTLBuffer`s zero-copy, com o endereço de GPU igual ao endereço de CPU, por isso só dispositivos de memória unificada são suportados.
+  - Os efeitos visíveis de "GPU completion" (sync objects ficando prontos, eventos escrevendo seu valor, contadores) acontecem só depois que o command buffer do Metal realmente terminou.
+  - Os pipeline states e depth-stencil states são cacheados por hash de estado; na inicialização, shaders e pipelines são pré-construídos conforme as manifestos de warm-up (a semente incluída `pso_manifest.tsv`, depois a `pso_user.tsv` do dispositivo; ver abaixo): com janela, em todos os núcleos antes do primeiro quadro do jogo atrás de uma tela "Preparing shaders" (docs/development.md, "The prepare step"), senão em segundo plano. Um pipeline que falha ao ser construído é cacheado como falho e reportado uma vez com suas chaves de shader.
+  - Os render pipelines são feitos pelo `MTL4Compiler` a partir de uma base cujo estado de cor fica não especializado, uma base por pipeline menos seu estado de cor, especializada por estado de cor; as bases ficam no arquivo de pipelines por jogo (`pso_archive/` ao lado de `pso_user.tsv`) e são retomadas dele na próxima inicialização (`pso_build`; ver docs/development.md, "Pipeline bases and the pipeline archive"). Um desenho cujo pipeline ainda não está construído desenha com o pipeline de pull do par de shaders dele (sem vertex descriptor) enquanto o seu próprio é construído em segundo plano (docs/development.md, "Hybrid pipelines").
+  - As texturas empacotadas do jogo estão em layout block-linear de Tegra e são deswizzled antes do upload (veja `tex/README.md`).
+  - Apresentação: a textura de swapchain do jogo é desenhada para um `CAMetalLayer`, e o ritmo da apresentação é agendado pelo pacer em `nvn/nvn_pace.h`.
 
-For which Metal object each NVN object and command lands on, see [nvn_metal_mapping.md](nvn_metal_mapping.md).
+Para saber em que objeto Metal cada objeto e comando NVN cai, veja [nvn_metal_mapping.md](nvn_metal_mapping.md).
 
-### Shader translation chain
+### Cadeia de tradução de shaders
 
-The game's shaders are GPU machine code for the Tegra X1 (the Maxwell instruction set). The translation from this machine code to Metal Shading Language is not done on the phone; all of it happens offline:
+Os shaders do jogo são código de máquina de GPU para o Tegra X1 (o conjunto de instruções Maxwell). A tradução desse código de máquina para Metal Shading Language não é feita no celular; tudo acontece offline:
 
 ```
-Original Switch shader package
-  → tools/dmsh_xlate        produces SPIR-V with Ryujinx's shader translation library (a C# tool)
-  → spirv-cross             converts SPIR-V to Metal Shading Language (MSL); the in-repo build tools/spirv_cross_bin
-  → xcrun metal / metallib  compiles into Metal shader libraries
+Pacote de shader original de Switch
+  → tools/dmsh_xlate        produz SPIR-V com a biblioteca de tradução de shaders do Ryujinx (uma ferramenta em C#)
+  → spirv-cross             converte SPIR-V para Metal Shading Language (MSL); o build no repositório tools/spirv_cross_bin
+  → xcrun metal / metallib  compila para bibliotecas de shader Metal
 ```
 
-The whole chain is driven by `tools/dmsh_build.py`; `scripts/build_ipa_from_nsp.py` runs it as part of packing an IPA. Key points:
+A cadeia inteira é conduzida por `tools/dmsh_build.py`; `scripts/build_ipa_from_nsp.py` a executa como parte da montagem de um IPA. Pontos-chave:
 
-- **Key**: each shader is keyed by the first 16 hexadecimal digits of the sha256 of its control section (the first 0x880 bytes, or the section's own length at control +0x20 when that is shorter, as in SDK 10's 0x850-byte sections) followed by its code area (many of Mario's shaders share a control section and differ in code). At run time the game hands both to `nvnProgramSetShaders`, and the replay layer computes the same key to find the library.
-- **Build outputs**: `<key>_b.metallib` (the shader library), `<key>_b.json` (reflection used by replay: each binding's kind, slot number, index within the argument buffer and so on), `<key>_b.metal` (the MSL source). Some fragment shaders additionally have `<key>_bf.metallib`, a "readable tile" version used for pass merging (see the file header of `tools/dmsh_fetch.py`). `_b_build.json` in the directory records the success or failure of each key in this run.
-- **The library ABI**: `nvn/dmsh_abi.h` is the one definition of what the libraries and the replay must agree on: the NVN driver segments' layout (the `c2` handle tables, the `c0` storage and uniform buffer tables and the words the host fills) and the binding kinds of `<key>_b.json`. The host includes it; `tools/dmsh_abi.py` reads it for `dmsh_build.py` and stops on any line it cannot read. Both are part of the chain version, and `dm/tools/tests/test_dmsh_abi.py` guards them (the translator's `Program.cs` keeps its own copy of the `c2` layout, which the test compares).
-- **`dm/games/<id>/shader_map.tsv`**: the shader map, one row per shader variant. At run time only its "key → stage (vertex / fragment / compute)" is used.
-- **`dm/games/<id>/shader_facts.tsv`**: the answer table for translation queries. The translator needs to know some facts that cannot be read from the machine code (the dimension type of a texture, image formats, the component types of vertex attributes and fragment outputs, a compute shader's thread group size and shared memory byte count), and this table gives the answers by key. The table ships with the repository, and building the shader libraries only reads it; the table is maintained by `tools/dmsh_facts.py`, whose file header has the details.
-- **Translation chain version and the `b-<V>/` directory**: the version V is a string of 12 hexadecimal digits, obtained by hashing together the contents of the source files involved in the translation chain, the translation options and the tool fingerprints (`tools/dmsh_chain.lock`); `tools/dmsh_chain.py` computes it. Shader libraries are written into `<output directory>/b-<V>/`, and every reflection json also records V. When the host is compiled it takes V from `nvn/dmsh_chain.h`, one version for every game, loads only from `b-<V>/`, and checks the version in each json one by one; on a mismatch it reports red and does not load. So after changing any file on the chain, or changing a tool, the libraries must be rebuilt and the host recompiled. A profile's inputs (its shader tables and `shader_*` / `nvn_*` keys) are not part of V: they are in each shader's cache key, so a change rebuilds the shaders it affects, and a full build stamps the directory with the game and their digest (`b-<V>/inputs.tsv`, `dmsh_chain.py inputs`). A full build starts from no shader outputs and a partial one from none of the keys it builds, so a directory holds only what its last build made; it refuses a directory stamped for another game, so each game needs its own output directory.
-  - `dmsh_chain.py`: prints V.
-  - `tool_lock.py --check-tools`: checks that the local tools match the lock file.
-  - `tool_lock.py --update-lock`: rewrites the lock file according to the local tools. The lock is part of V; these checks are not (they decide no output), so a change to them neither changes V nor rebuilds any shader.
-  - `dmsh_chain.py --header`: rewrites `nvn/dmsh_chain.h` (commit it with the chain change; `dm/tools/tests/test_nsp_chain.py` fails on a stale one).
-  - `dmsh_chain.py --inputs`: prints the digest of the current profile's inputs (`DM_GAME`), as a full build stamps it.
-  - The converter is `tools/spirv_cross_bin/spirv-cross`, built by `tools/spirv_cross_bin/build.sh` from a pinned upstream commit. `SPIRV_CROSS=` selects another executable, which must match the lock for NVN builds. Changing the pin requires rebuilding it, `tool_lock.py --update-lock` and `dmsh_chain.py --header`. Moving to another Xcode also requires updating the documented tested version.
-  - `tools/own_compilers.py <dmsh_build.py arguments>` requires the translator, SPIRV-Cross and both Metal compilers to match the lock. Another Metal compiler stops the build with installation instructions; `DM_ALLOW_OTHER_METAL=1` permits it and prints the actual version. Issue #242 reported corruption with an untested compiler, but the compiler's role remains unconfirmed. The override changes cache keys without changing the lock or chain version.
-- **`dm/games/<id>/c1_full.tsv`**: the index list for the shaders' built-in constant section (c1), generated by `tools/c1_guard.py` scanning the translated MSL; it lists the shader keys whose "run-time index could not be proven bounded". An index counts as proven only when interval arithmetic over the whole expression (every variable followed to its single definition; literals, `& K`, `% K`, shifts, `min`, `max`, `clamp` and casts bound it) keeps it non-negative and inside the span a shared bank gives that shader: its c1 data rounded up to 256 bytes plus the 256-byte zero gap. Every stage counts (`vp_`, `fp_`, `cp_` …). Its first line records the `b-<V>` and the inputs stamp of the library it was made from. For the shaders on the list the replay layer allocates a separate whole 64 KiB buffer for c1; when the list is missing or does not name the loaded library's version and stamp, it reports red and conservatively treats all shaders this way. The list is not committed (git ignores it): each checkout makes it from its own build's Mac outputs (a full `dmsh_build.py` run does).
-- **`dm/games/<id>/cb_extent.tsv`**: how far into each uniform slot (cbuf binding) every shader can read, generated by `tools/cb_extent.py` from the translated MSL with `c1_guard.py`'s interval arithmetic: per shader key, `reg:bytes` for each slot whose reads are all proven to stay inside its first bytes, and `s<reg>` for each storage slot the shader never writes (SPIRV-Cross types every storage buffer Ryujinx emits as writable, so the host counts the others as written). When the game updates part of a bound uniform block inside a render pass, the replay layer copies only that much of the binding to give the draws after the update their data without ending the pass (`nvn_mtl.m` `ubp_get`; Breath of the Wild binds a 64 KiB block and its vertex shaders read at most 544 bytes of it). Its first line records the `b-<V>` and inputs stamp, like `c1_full.tsv`'s; when it is missing or stale, bindings are copied whole (up to 64 KiB). Like `c1_full.tsv`, it is not committed, and a full `dmsh_build.py` run makes it.
-- **`dm/games/<id>/shader_pairs.tsv` and `pso_pairs.tsv`**: the (vertex key, pixel key) of every BNSH variation (Unity: of every program) and agl BAHS program variation, written by `tools/shader_split.py`. Metal only builds a pipeline when every pixel shader input is a vertex shader output, while Maxwell gives an unwritten attribute a default; `dmsh_build.py` therefore adds the outputs a vertex shader's partners read but it doesn't write, set to (0, 0, 0, 1) (`vs_pad`). The profile tables are part of its inputs digest and the per-shader cache keys. A profile without `pso_pairs.tsv` takes the generated table beside the shader package.
-- **Several game versions**: `shader_split.py` takes comma-separated RomFS and `main` lists (base game first) and writes the union; the map, facts and pairs tables currently cover Mario v0 and 1.2.1.
-- **`dm/games/<id>/pso_manifest.tsv`**: the warm-up seed manifest bundled with the app: shaders (`S`), render pipelines (`R`, the hex of `pso_skey` in `nvn/nvn_pso_skey.h`) and compute pipelines (`C`) to pre-build at startup. The row order is the pre-build order (first use); do not sort it. Its companion is `pso_user.tsv`, which the host appends next to the save directory whenever it has to build something on the spot, and which is pre-built after the seed at the next launch. Both name shaders by key and describe pipeline settings only, so a list recorded on one device works on any other; lines a build cannot use are skipped. Recorded lines can be appended to the seed below its header (currently empty).
-- **Shaders embedded in the program itself**: the main program additionally contains 4 compute shaders that are not in the shader package; they were hand-written as MSL from the disassembly and are in `nvn/nvn_builtin.h`.
+- **Chave**: cada shader é indexado pelos 16 primeiros dígitos hexadecimais do sha256 da sua control section (os primeiros 0x880 bytes, ou o comprimento próprio da seção em control +0x20 quando esse é menor, como nas seções de 0x850 bytes do SDK 10) seguido pela sua área de código (muitos shaders de Mario compartilham uma control section e diferem no código). Em tempo de execução o jogo entrega ambos a `nvnProgramSetShaders`, e a camada de replay calcula a mesma chave para achar a biblioteca.
+- **Saídas do build**: `<key>_b.metallib` (a biblioteca de shader), `<key>_b.json` (reflection usada pelo replay: o tipo de cada binding, o número do slot, o índice dentro do argument buffer e assim por diante), `<key>_b.metal` (o código MSL). Alguns fragment shaders têm adicionalmente `<key>_bf.metallib`, uma versão "readable tile" usada para fusão de passes (veja o cabeçalho do arquivo `tools/dmsh_fetch.py`). O `_b_build.json` no diretório registra o sucesso ou a falha de cada chave nesta execução.
+- **A ABI da biblioteca**: `nvn/dmsh_abi.h` é a definição única do que as bibliotecas e o replay devem concordar: o layout dos segmentos de driver NVN (as tabelas de handles `c2`, as tabelas de storage e uniform buffers `c0` e as palavras que o host preenche) e os tipos de binding do `<key>_b.json`. O host o inclui; `tools/dmsh_abi.py` o lê para o `dmsh_build.py` e para em qualquer linha que não consiga ler. Ambos fazem parte da versão da cadeia, e `dm/tools/tests/test_dmsh_abi.py` os protege (o `Program.cs` do tradutor mantém sua própria cópia do layout `c2`, que o teste compara).
+- **`dm/games/<id>/shader_map.tsv`**: o mapa de shaders, uma linha por variante de shader. Em tempo de execução só se usa seu "chave → estágio (vertex / fragment / compute)".
+- **`dm/games/<id>/shader_facts.tsv`**: a tabela de respostas para consultas da tradução. O tradutor precisa saber fatos que não podem ser lidos do código de máquina (o tipo de dimensão de uma textura, formatos de imagem, os tipos de componente de atributos de vértice e saídas de fragment, o tamanho do thread group e a contagem de bytes de memória compartilhada de um compute shader), e esta tabela dá as respostas por chave. A tabela acompanha o repositório, e a build das bibliotecas de shader só a lê; a tabela é mantida por `tools/dmsh_facts.py`, cujo cabeçalho traz os detalhes.
+- **Versão da cadeia de tradução e o diretório `b-<V>/`**: a versão V é uma string de 12 dígitos hexadecimais, obtida hashando juntos os conteúdos dos arquivos-fonte envolvidos na cadeia de tradução, as opções de tradução e as impressões digitais das ferramentas (`tools/dmsh_chain.lock`); `tools/dmsh_chain.py` a calcula. As bibliotecas de shader são escritas em `<diretório de saída>/b-<V>/`, e todo json de reflection também registra V. Quando o host é compilado, ele pega V de `nvn/dmsh_chain.h`, uma versão para todo jogo, carrega só de `b-<V>/`, e confere a versão em cada json um por um; numa divergência ele reporta vermelho e não carrega. Portanto, depois de mudar qualquer arquivo da cadeia, ou mudar uma ferramenta, as bibliotecas devem ser reconstruídas e o host, recompilado. As entradas de um perfil (suas tabelas de shader e chaves `shader_*` / `nvn_*`) não fazem parte de V: elas estão na chave de cache de cada shader, então uma mudança reconstrói os shaders que afeta, e um build completo carimba o diretório com o jogo e o digest delas (`b-<V>/inputs.tsv`, `dmsh_chain.py inputs`). Um build completo parte de nenhuma saída de shader, e um parcial de nenhuma das chaves que constrói, então um diretório contém só o que seu último build produziu; ele recusa um diretório carimbado para outro jogo, por isso cada jogo precisa do seu próprio diretório de saída.
+  - `dmsh_chain.py`: imprime V.
+  - `tool_lock.py --check-tools`: verifica se as ferramentas locais coincidem com o arquivo de lock.
+  - `tool_lock.py --update-lock`: reescreve o arquivo de lock conforme as ferramentas locais. O lock faz parte de V; essas checagens não fazem (não decidem nenhuma saída), então uma mudança nelas não altera V nem reconstrói shader algum.
+  - `dmsh_chain.py --header`: reescreve `nvn/dmsh_chain.h` (commite-o junto com a mudança da cadeia; `dm/tools/tests/test_nsp_chain.py` falha num desatualizado).
+  - `dmsh_chain.py --inputs`: imprime o digest das entradas do perfil atual (`DM_GAME`), como um build completo o carimba.
+  - O conversor é `tools/spirv_cross_bin/spirv-cross`, construído por `tools/spirv_cross_bin/build.sh` a partir de um commit upstream fixado. `SPIRV_CROSS=` seleciona outro executável, que deve coincidir com o lock para builds NVN. Mudar o pin exige reconstruí-lo, rodar `tool_lock.py --update-lock` e `dmsh_chain.py --header`. Migrar para outro Xcode também exige atualizar a versão testada documentada.
+  - `tools/own_compilers.py <argumentos do dmsh_build.py>` exige que o tradutor, o SPIRV-Cross e ambos os compiladores Metal coincidam com o lock. Outro compilador Metal para a build com instruções de instalação; `DM_ALLOW_OTHER_METAL=1` o permite e imprime a versão real. A issue #242 reportou corrupção com um compilador não testado, mas o papel do compilador permanece não confirmado. O override muda chaves de cache sem alterar o lock nem a versão da cadeia.
+- **`dm/games/<id>/c1_full.tsv`**: a lista de índices para a seção de constantes embutida (c1) dos shaders, gerada pelo `tools/c1_guard.py` varrendo o MSL traduzido; lista as chaves de shader cujo "índice em tempo de execução não pôde ser provado limitado". Um índice conta como provado só quando aritmética de intervalos sobre a expressão inteira (cada variável seguida até sua única definição; literais, `& K`, `% K`, shifts, `min`, `max`, `clamp` e casts o limitam) o mantém não negativo e dentro do intervalo que um banco compartilhado dá àquele shader: seus dados de c1 arredondados para cima até 256 bytes mais a lacuna de zeros de 256 bytes. Todo estágio conta (`vp_`, `fp_`, `cp_` …). Sua primeira linha registra o `b-<V>` e o carimbo de entradas da biblioteca de que foi feita. Para os shaders da lista, a camada de replay aloca um buffer inteiro separado de 64 KiB para o c1; quando a lista falta ou não nomeia a versão e o carimbo da biblioteca carregada, ela reporta vermelho e trata todos os shaders assim, conservadoramente. A lista não é commiteada (o git a ignora): cada checkout a faz a partir das saídas Mac do seu próprio build (um build completo do `dmsh_build.py` o faz).
+- **`dm/games/<id>/cb_extent.tsv`**: até onde em cada slot uniform (binding de cbuf) cada shader pode ler, gerado pelo `tools/cb_extent.py` a partir do MSL traduzido com a aritmética de intervalos do `c1_guard.py`: por chave de shader, `reg:bytes` para cada slot cujas leituras são todas provadas dentro dos seus primeiros bytes, e `s<reg>` para cada slot storage que o shader nunca escreve (o SPIRV-Cross tipa todo storage buffer que o Ryujinx emite como gravável, então o host conta os demais como escritos). Quando o jogo atualiza parte de um uniform block vinculado dentro de um render pass, a camada de replay copia só essa parte do binding para dar aos desenhos após a atualização os seus dados sem encerrar o pass (`nvn_mtl.m` `ubp_get`; Breath of the Wild vincula um bloco de 64 KiB e seus vertex shaders leem no máximo 544 bytes dele). Sua primeira linha registra o `b-<V>` e o carimbo de entradas, como a do `c1_full.tsv`; quando falta ou está desatualizada, os bindings são copiados inteiros (até 64 KiB). Como o `c1_full.tsv`, não é commiteado, e um build completo do `dmsh_build.py` o produz.
+- **`dm/games/<id>/shader_pairs.tsv` e `pso_pairs.tsv`**: os (chave de vertex, chave de pixel) de cada variante BNSH (Unity: de cada programa) e de variante de programa agl BAHS, escritos pelo `tools/shader_split.py`. O Metal só constrói um pipeline quando toda entrada de pixel shader é uma saída de vertex shader, enquanto o Maxwell dá a um atributo não escrito um valor padrão; o `dmsh_build.py` portanto acrescenta as saídas que os parceiros de um vertex shader leem mas ele não escreve, ajustadas em (0, 0, 0, 1) (`vs_pad`). As tabelas do perfil fazem parte do seu digest de entradas e das chaves de cache por shader. Um perfil sem `pso_pairs.tsv` usa a tabela gerada ao lado do pacote de shaders.
+- **Várias versões de jogo**: o `shader_split.py` aceita listas separadas por vírgula de RomFS e de `main` (o jogo base primeiro) e escreve a união; as tabelas map, facts e pairs hoje cobrem Mario v0 e 1.2.1.
+- **`dm/games/<id>/pso_manifest.tsv`**: o manifesto de semente de warm-up incluído no app: shaders (`S`), render pipelines (`R`, o hex do `pso_skey` em `nvn/nvn_pso_skey.h`) e compute pipelines (`C`) a pré-construir na inicialização. A ordem das linhas é a ordem de pré-construção (primeiro uso); não a ordene. Sua companheira é a `pso_user.tsv`, que o host acrescenta ao lado do diretório de saves sempre que precisa construir algo na hora, e que é pré-construída depois da semente na próxima abertura. Ambas nomeiam shaders por chave e descrevem só as configurações do pipeline, então uma lista gravada num dispositivo funciona em qualquer outro; linhas que um build não pode usar são puladas. Linhas gravadas podem ser acrescentadas à semente abaixo do seu cabeçalho (atualmente vazio).
+- **Shaders embutidos no próprio programa**: o programa principal contém adicionalmente 4 compute shaders que não estão no pacote de shaders; foram escritos à mão em MSL a partir do desmontamento e estão em `nvn/nvn_builtin.h`.
 
-Binding conventions followed during translation (the NVN driver's layout, the same in every game: `tools/dmsh_build.py`, filled at run time by `nvn/nvn_mtl.m`):
+Convenções de binding seguidas na tradução (o layout do driver NVN, o mesmo em todo jogo: `tools/dmsh_build.py`, preenchido em tempo de execução pelo `nvn/nvn_mtl.m`):
 
-- uniform buffer r is constant section `c[3 + r]` in the machine code;
-- the handle of combined texture r (`nvnCommandBufferBindTexture`) is at `c[2][0x20 + 8r]`, of image r at `c[2][0x120 + 8r]`, of separate texture r at `c[2][0x168 + 8r]` (the host's texture slot 128 + r) and of separate sampler r at `c[2][0x568 + 8r]`;
-- the address of storage buffer r is at `c[0][base + 16r]`, with base: vertex 0x110, compute 0x310, fragment 0x510;
-- the window origin is at the top left and the depth range is 0 to 1, the same as Metal, so nothing is flipped during translation.
+- o uniform buffer r é a seção de constantes `c[3 + r]` no código de máquina;
+- o handle da textura combinada r (`nvnCommandBufferBindTexture`) está em `c[2][0x20 + 8r]`, o da imagem r em `c[2][0x120 + 8r]`, o da textura separada r em `c[2][0x168 + 8r]` (o slot de textura 128 + r do host) e o do sampler separado r em `c[2][0x568 + 8r]`;
+- o endereço do storage buffer r está em `c[0][base + 16r]`, com base: vertex 0x110, compute 0x310, fragment 0x510;
+- a origem da janela é no canto superior esquerdo e a faixa de profundidade vai de 0 a 1, igual ao Metal, por isso nada é espelhado na tradução.
 
-## Directory structure
+## Estrutura de diretórios
 
-| Location | Contents |
+| Local | Conteúdo |
 |---|---|
-| `nvn/hle_nvn.c` | Interface layer: NVN takeover, object implementations, command recording, presentation pacing |
-| `nvn/nvn_mtl.m`, `nvn/nvn_mtl.h` | Replay layer: Metal device, memory pools, textures, shader loading, pipelines, drawing, presentation |
-| `nvn/nvn_obj.h` | Host-side object layouts and the command record format, shared by both layers |
-| `nvn/nvn_entry.S`, `nvn/nvn_thunks.S` | Entries for the unimplemented stub and the timing wrapper, per-function thunks |
-| `nvn/nvn_tex.c`, `nvn/nvn_tex.h` | Storage size, alignment and per-level offsets of block-linear textures (ported from deko3d) |
-| `nvn/nvn_dirty.c`, `nvn/nvn_dirty.h` | Tracks dirty pages of game memory with write protection, to decide whether texture contents have changed and need re-uploading |
-| `nvn/nvn_refl.m`, `nvn/nvn_refl.h` | Converts shader reflection json into fixed-length C arrays, so that drawing only walks arrays |
-| `nvn/nvn_hmap.h`, `nvn/nvn_cover.h`, `nvn/nvn_pace.h`, `nvn/nvn_pso_skey.h`, `nvn/nvn_primitive.h` | Hash table, geometric proof of full-coverage draws, presentation pacer, pipeline manifest key, indexed triangle fans and quads as triangle lists (primitive restart kept) |
-| `nvn/nvn_builtin.h` | Hand-written MSL for the 4 compute shaders embedded in the main program |
-| `nvn/include/nvn.h` | NVN interface declarations (third party; for the license see the file header) |
-| `nvn/names.txt` | The NVN API name list. The per-game tables described above live in the game profile `dm/games/<id>/` (named after the base game's title ID; tools pick it with `DM_GAME`, make with `GAME`; there is no default game) |
-| `tex/` | Texture format mapping, deswizzling, BC decompression, see [tex/README.md](tex/README.md) |
-| `vk/hle_vk.m` | Vulkan on Metal, for games that render with Vulkan (Hades, Super Mario Galaxy); their SPIR-V shaders are translated by `tools/vk_shaders.py` |
-| `gl/hle_gl.m` | OpenGL through EGL on Metal, for games that render with NVIDIA's GL driver (Digimon Story Cyber Sleuth: Complete Edition; Balatro, LÖVE on its core-profile paths); their GLSL sources are translated by `tools/gl_shaders.py` (glslang, then SPIRV-Cross) |
-| `metal/` | A standalone minimal Metal offscreen example, not compiled into the host, see [metal/README.md](metal/README.md) |
-| `tools/` | Offline tools, see below |
-| `tests/` | Unit tests |
-| `hle_vi.c`, `hle_nv.c` | Glue layer for display service and graphics driver initialization: returns host static objects or does nothing |
+| `nvn/hle_nvn.c` | Camada de interface: tomada do NVN, implementações de objetos, gravação de comandos, ritmo da apresentação |
+| `nvn/nvn_mtl.m`, `nvn/nvn_mtl.h` | Camada de replay: dispositivo Metal, memory pools, texturas, carregamento de shaders, pipelines, desenho, apresentação |
+| `nvn/nvn_obj.h` | Layouts de objetos do lado do host e formato de registro de comando, compartilhados pelas duas camadas |
+| `nvn/nvn_entry.S`, `nvn/nvn_thunks.S` | Entradas do stub não implementado e do wrapper de medição, thunks por função |
+| `nvn/nvn_tex.c`, `nvn/nvn_tex.h` | Tamanho de armazenamento, alinhamento e offsets por nível de texturas block-linear (portado do deko3d) |
+| `nvn/nvn_dirty.c`, `nvn/nvn_dirty.h` | Rastreia páginas sujas da memória do jogo com proteção de escrita, para decidir se o conteúdo de texturas mudou e precisa de re-upload |
+| `nvn/nvn_refl.m`, `nvn/nvn_refl.h` | Converte o json de reflection do shader em arrays C de tamanho fixo, para que o desenho só percorra arrays |
+| `nvn/nvn_hmap.h`, `nvn/nvn_cover.h`, `nvn/nvn_pace.h`, `nvn/nvn_pso_skey.h`, `nvn/nvn_primitive.h` | Tabela hash, prova geométrica de desenhos de cobertura total, pacer de apresentação, chave de manifesto de pipeline, triangle fans e quads indexados como triangle lists (primitive restart mantido) |
+| `nvn/nvn_builtin.h` | MSL escrito à mão para os 4 compute shaders embutidos no programa principal |
+| `nvn/include/nvn.h` | Declarações da interface NVN (de terceiros; para a licença veja o cabeçalho do arquivo) |
+| `nvn/names.txt` | A lista de nomes da API NVN. As tabelas por jogo descritas acima ficam no perfil do jogo `dm/games/<id>/` (nomeado pelo title ID do jogo base; as ferramentas o escolhem com `DM_GAME`, o make com `GAME`; não há jogo padrão) |
+| `tex/` | Mapeamento de formatos de textura, deswizzling, descompressão BC, veja [tex/README.md](tex/README.md) |
+| `vk/hle_vk.m` | Vulkan sobre Metal, para jogos que renderizam com Vulkan (Hades, Super Mario Galaxy); seus shaders SPIR-V são traduzidos pelo `tools/vk_shaders.py` |
+| `gl/hle_gl.m` | OpenGL via EGL sobre Metal, para jogos que renderizam com o driver GL da NVIDIA (Digimon Story Cyber Sleuth: Complete Edition; Balatro, LÖVE nos seus caminhos de core profile); seus códigos GLSL são traduzidos pelo `tools/gl_shaders.py` (glslang, depois SPIRV-Cross) |
+| `metal/` | Um exemplo offscreen mínimo autônomo de Metal, não compilado no host, veja [metal/README.md](metal/README.md) |
+| `tools/` | Ferramentas offline, veja abaixo |
+| `tests/` | Testes de unidade |
+| `hle_vi.c`, `hle_nv.c` | Camada de cola para o serviço de display e a inicialização do driver gráfico: retorna objetos estáticos do host ou não faz nada |
 
-The scripts in `tools/`; usage is written in each file's header:
+Os scripts em `tools/`; o uso está escrito no cabeçalho de cada arquivo:
 
-| Script | Purpose |
+| Script | Finalidade |
 |---|---|
-| `dmsh_xlate/` | The shader translation tool (C#), which references the translation library in `dm/third_party/ryujinx` |
-| `dmsh_build.py` | Drives the whole translation chain to produce the shader libraries; when the environment variable `IOSOUT=directory` is set, it also produces the iOS version |
-| `dmsh_chain.py`, `dmsh_chain.lock` | Translation chain version and tool fingerprints |
-| `dmsh_facts.py` | Reads the answer table `shader_facts.tsv` (which `shader_split.py` writes) |
-| `dmsh_fetch.py` | Generates the "readable tile" versions of fragment shaders |
-| `c1_guard.py` | Generates `c1_full.tsv` |
-| `cb_extent.py` | Generates `cb_extent.tsv` |
-| `dmsh_dryrun.py` | Dry-run conversion of the whole library, measuring only "can it be converted" |
-| `gen_protos.py` | Generates `nvn_protos.h` / the thunks |
-| `tbdr_budget.py`, `tbdr_load_dead.py`, `tbdr_store_dead.py`, `tbdr_pass_merge.py` | Read the `DM_NVN_PASSDUMP` log and analyze the load / store volume of each render pass's attachments per frame |
-| `passgpu_top.py` | Reads the `DM_NVN_PASSGPU` output and lists GPU time by pass |
+| `dmsh_xlate/` | A ferramenta de tradução de shaders (C#), que referencia a biblioteca de tradução em `dm/third_party/ryujinx` |
+| `dmsh_build.py` | Conduz a cadeia de tradução inteira para produzir as bibliotecas de shader; quando a variável de ambiente `IOSOUT=diretório` está definida, também produz a versão iOS |
+| `dmsh_chain.py`, `dmsh_chain.lock` | Versão da cadeia de tradução e impressões digitais das ferramentas |
+| `dmsh_facts.py` | Lê a tabela de respostas `shader_facts.tsv` (que o `shader_split.py` escreve) |
+| `dmsh_fetch.py` | Gera as versões "readable tile" de fragment shaders |
+| `c1_guard.py` | Gera `c1_full.tsv` |
+| `cb_extent.py` | Gera `cb_extent.tsv` |
+| `dmsh_dryrun.py` | Conversão de ensaio da biblioteca inteira, medindo só "ela pode ser convertida" |
+| `gen_protos.py` | Gera `nvn_protos.h` / os thunks |
+| `tbdr_budget.py`, `tbdr_load_dead.py`, `tbdr_store_dead.py`, `tbdr_pass_merge.py` | Leem o log `DM_NVN_PASSDUMP` e analisam o volume de load / store dos anexos de cada render pass por quadro |
+| `passgpu_top.py` | Lê a saída `DM_NVN_PASSGPU` e lista o tempo de GPU por pass |
 
-## Building
+## Compilação
 
-The graphics layer has no separate library. `dm/host/Makefile` compiles `dm/gfx/*.c` and the source files under `dm/gfx/nvn/` and `dm/gfx/tex/` into the host `dmhost` by wildcard; the iOS App is built by `dm/ios/tools/build_ipa.sh`, which also copies the map, `pso_manifest.tsv`, `c1_full.tsv` and the `b-<V>/` shader libraries into the App. `tests/` and `metal/` do not go into the host.
+A camada gráfica não tem biblioteca separada. O `dm/host/Makefile` compila `dm/gfx/*.c` e os arquivos-fonte sob `dm/gfx/nvn/` e `dm/gfx/tex/` no host `dmhost` por wildcard; o App iOS é montado pelo `dm/ios/tools/build_ipa.sh`, que também copia o map, `pso_manifest.tsv`, `c1_full.tsv` e as bibliotecas de shader `b-<V>/` para o App. `tests/` e `metal/` não vão para o host.
 
-The shader libraries are generated by `tools/dmsh_build.py` (the NSP script runs it; for building by hand see [docs/development.md](../../docs/development.md)):
+As bibliotecas de shader são geradas pelo `tools/dmsh_build.py` (o script do NSP o executa; para compilar à mão veja [docs/development.md](../../docs/development.md)):
 
-- the Mac version is in `$DM_ROOT/build/cache/metal_shader_cache/b-<V>/`;
-- the iOS version is in `$DM_ROOT/build/ios/dmsh_b/b-<V>/`.
+- a versão Mac fica em `$DM_ROOT/build/cache/metal_shader_cache/b-<V>/`;
+- a versão iOS fica em `$DM_ROOT/build/ios/dmsh_b/b-<V>/`.
 
-After changing a file on the translation chain, the order for rebuilding manually is: `dmsh_chain.py --header` (once, for every game) → `dmsh_build.py` (a full build also makes `c1_full.tsv` and `cb_extent.tsv`, local tables, not committed) → recompile the host.
+Depois de mudar um arquivo da cadeia de tradução, a ordem para reconstruir manualmente é: `dmsh_chain.py --header` (uma vez, para todo jogo) → `dmsh_build.py` (um build completo também produz `c1_full.tsv` e `cb_extent.tsv`, tabelas locais, não commiteadas) → recompilar o host.
 
-The per-shader cache key in `dmsh_build.py` (`shader_key`) covers the profile's `shader_*` rows and the shader's pairs, and a paired vertex shader's key also takes its pixel shaders' keys (`pair_keyed`), since `vs_pad` reads their MSL. Before, these were only in the chain version, so a build after changing only them hit the old per-shader entries and filed them under the new version; now the chain version leaves them out altogether. `$DM_ROOT` defaults to `~/dm-work`.
+A chave de cache por shader no `dmsh_build.py` (`shader_key`) cobre as linhas `shader_*` do perfil e os pares do shader, e a chave de um vertex shader pareado também leva as chaves dos seus pixel shaders (`pair_keyed`), já que o `vs_pad` lê o MSL deles. Antes, isso só estava na versão da cadeia, então um build depois de mudar apenas isso acertava as entradas antigas por shader e as arquivava sob a nova versão; agora a versão da cadeia as deixa de fora por completo. `$DM_ROOT` tem valor padrão `~/dm-work`.
 
-## Tests
+## Testes
 
 ```sh
-make -C dm/gfx/tests run        # graphics layer unit tests
-make -C dm/gfx/tex/tests run    # texture submodule unit tests; the real-data items need texture samples from both the Switch and PC versions, see tex/README.md
-make -C dm/gfx/metal run        # offscreen example self-test, see metal/README.md
+make -C dm/gfx/tests run        # testes de unidade da camada gráfica
+make -C dm/gfx/tex/tests run    # testes de unidade do submódulo de texturas; os itens com dados reais precisam de amostras de textura das versões Switch e PC, veja tex/README.md
+make -C dm/gfx/metal run        # autoteste do exemplo offscreen, see metal/README.md
 ```
 
-The tests in `dm/gfx/tests` compile the production code in directly and need a Metal device on the local machine; a few of them run under `MTL_DEBUG_LAYER=1` (the Metal validation layer). Most tests do not read the workspace; the exceptions are `t_refl` and `t_rt_range_ro`, which read the translated shader reflection json under `$DM_ROOT/build/cache/metal_shader_cache`, and `test_tbdr_budget.py`, which creates a temporary directory under `$DM_ROOT/run/gfx`. Main contents:
+Os testes em `dm/gfx/tests` compilam o código de produção diretamente e precisam de um dispositivo Metal na máquina local; alguns deles rodam sob `MTL_DEBUG_LAYER=1` (a camada de validação do Metal). A maioria dos testes não lê o workspace; as exceções são `t_refl` e `t_rt_range_ro`, que leem o json de reflection de shaders traduzidos sob `$DM_ROOT/build/cache/metal_shader_cache`, e `test_tbdr_budget.py`, que cria um diretório temporário sob `$DM_ROOT/run/gfx`. Principais conteúdos:
 
-| Test | What it checks |
+| Teste | O que verifica |
 |---|---|
-| `t_nvn` | Interface layer: fetches addresses from `nvnBootstrapLoader` the way the game does, all the way through to presentation |
-| `t_builtin` | The 4 embedded compute shaders |
-| `t_refl`, `t_hmap`, `t_cover`, `t_pace`, `t_pso_skey`, `t_dirty_slots` | Reflection parsing, hash table, full-coverage proof, pacer, pipeline manifest key, dirty page tracking |
-| `t_pso_warm` | Historical manifest normalization and deduplication, draw-time cache reuse and GPU pixels for normal and merged passes, and one preparation per shader key across concurrent warm tasks with unrelated keys left free, through MTLDevice and Metal 4 |
-| `t_deswz_gpu` | GPU deswizzling |
-| `t_present_crop` | Presentation cropping |
-| `t_mip_extent` | Effective size when rendering to a mip level other than level 0 |
-| `t_fuse_check`, `t_reorder_chain`, `t_defer_chain`, `t_zskip`, `t_xv`, `t_ub`, `t_pfv`, `t_rt_range`, `t_rt_range_shape`, `t_rt_range_ro`, `t_rt_depth_ro` | Compile the replay layer `nvn_mtl.m` in directly and check the various optimization and diagnostic logic inside the replay layer |
-| `test_tbdr_budget.py` | The parsing in `tools/tbdr_budget.py` |
+| `t_nvn` | Camada de interface: busca endereços pelo `nvnBootstrapLoader` como o jogo faz, até chegar à apresentação |
+| `t_builtin` | Os 4 compute shaders embutidos |
+| `t_refl`, `t_hmap`, `t_cover`, `t_pace`, `t_pso_skey`, `t_dirty_slots` | Análise do reflection, tabela hash, prova de cobertura total, pacer, chave de manifesto de pipeline, rastreamento de páginas sujas |
+| `t_pso_warm` | Normalização e deduplicação do manifesto histórico, reuso de cache no momento do desenho e pixels de GPU para passes normais e mesclados, e uma preparação por chave de shader entre tarefas de warm-up concorrentes com chaves não relacionadas deixadas livres, através do MTLDevice e do Metal 4 |
+| `t_deswz_gpu` | Deswizzling na GPU |
+| `t_present_crop` | Recorte da apresentação |
+| `t_mip_extent` | Tamanho efetivo ao renderizar num nível de mip diferente do nível 0 |
+| `t_fuse_check`, `t_reorder_chain`, `t_defer_chain`, `t_zskip`, `t_xv`, `t_ub`, `t_pfv`, `t_rt_range`, `t_rt_range_shape`, `t_rt_range_ro`, `t_rt_depth_ro` | Compilam a camada de replay `nvn_mtl.m` diretamente e verificam as várias lógicas de otimização e diagnóstico dentro da camada de replay |
+| `test_tbdr_budget.py` | A análise do `tools/tbdr_budget.py` |
 
-## Common run-time switches
+## Chaves de execução comuns
 
-All are environment variables. The iOS App sets `DM_NVN_SHMAP` and `DM_MSL_DIR` itself at startup.
+Todas são variáveis de ambiente. O App iOS define `DM_NVN_SHMAP` e `DM_MSL_DIR` sozinho na inicialização.
 
-Resource locations:
+Locais de recursos:
 
-| Switch | Effect |
+| Chave | Efeito |
 |---|---|
-| `DM_NVN_SHMAP=path` | The shader map. The default is `../games/<id>/shader_map.tsv` relative to the executable's directory; `c1_full.tsv` and `pso_manifest.tsv` are taken from the same directory |
-| `DM_MSL_DIR=directory` | The parent directory of the shader libraries; the host loads from `b-<V>/` beneath it. When running the host on a Mac, set it to `$DM_ROOT/build/cache/metal_shader_cache` |
-| `DM_PSO_MANIFEST=path` or `off` | Use a different warm-up manifest, or turn warm-up off |
-| `DM_PSO_PREPARE=0` or `1` | `0`: the warm-up runs in the background while the game starts, as without a window; `1`: the game waits for it before its first frame also without a window (`DM_PSO_PREPARE_THREADS=<n>` workers; docs/development.md, "The prepare step") |
-| `DM_PSO_RECORD=path` | Appends the shaders and pipelines used in this run to a file, for re-recording the warm-up manifest |
-| `DM_PSO_USER=path` | Where to keep the per-device list of shaders and pipelines built on the spot (default: `pso_user.tsv` in the parent of `DM_SAVE`) |
-| `DM_PSO_ARCHIVE=folder` or `off` | Where to keep the per-game pipeline archive of pipeline bases (default: `pso_archive/` beside `pso_user.tsv`), or no archive |
-| `DM_PSO_MTL4=0` / `=1` | `0`: build render pipelines through the `MTLDevice` as before, with no unspecialized bases and no archive (the Mac's default is on). `1`: turn them on on iOS, where they are off by default |
-| `DM_PSO_HYBRID=0` | A draw whose pipeline is not built yet waits for it, instead of drawing with the pair's pulling pipeline meanwhile (docs/development.md, "Hybrid pipelines") |
-| `DM_PSO_PREBUILD=0` or `tool` | No prebuild of the pulling bases into the archive (in the prepare step, or in the background without one); `tool`: run the prebuild alone and exit (`DM_PSO_PREBUILD_DEPTH=zero`, `DM_PSO_PREBUILD_THREADS=<n>`) |
-| `DM_PSO_PAIRS=path` | The prebuild's second pair table (default: `pso_pairs.tsv` beside the shader map) |
-| `DM_PSO_BUNDLE=folder` or `off` | The pipeline archive made offline (`dm/gfx/tools/pso_offline.py`): `<GPU architecture>.mtl4a` and `prebuilt.tsv`, read only; when it covers the shader pairs the device builds no prebuild bases. The iOS app sets it to its `pso/` folder when it has one (docs/development.md, "The pipeline archive made offline") |
-| `DM_PSO_WAITLOG=1` | Log each draw that waited more than 20 ms for its pipeline, with why no stand-in served it |
-| `DM_PSO_PULL_ALL=1` | Diagnostic: every draw that has a pulling pipeline draws with it |
+| `DM_NVN_SHMAP=path` | O mapa de shaders. O padrão é `../games/<id>/shader_map.tsv` relativo ao diretório do executável; `c1_full.tsv` e `pso_manifest.tsv` vêm do mesmo diretório |
+| `DM_MSL_DIR=diretório` | O diretório pai das bibliotecas de shader; o host carrega de `b-<V>/` abaixo dele. Ao rodar o host num Mac, defina-o para `$DM_ROOT/build/cache/metal_shader_cache` |
+| `DM_PSO_MANIFEST=path` ou `off` | Usa um manifesto de warm-up diferente, ou desliga o warm-up |
+| `DM_PSO_PREPARE=0` ou `1` | `0`: o warm-up roda em segundo plano enquanto o jogo começa, como sem janela; `1`: o jogo espera por ele antes do seu primeiro quadro também sem janela (`DM_PSO_PREPARE_THREADS=<n>` trabalhadores; docs/development.md, "The prepare step") |
+| `DM_PSO_RECORD=path` | Acrescenta a um arquivo os shaders e pipelines usados nesta execução, para regravar o manifesto de warm-up |
+| `DM_PSO_USER=path` | Onde guardar a lista por dispositivo de shaders e pipelines construídos na hora (padrão: `pso_user.tsv` no pai de `DM_SAVE`) |
+| `DM_PSO_ARCHIVE=pasta` ou `off` | Onde guardar o arquivo de pipelines por jogo das bases de pipeline (padrão: `pso_archive/` ao lado de `pso_user.tsv`), ou nenhum arquivo |
+| `DM_PSO_MTL4=0` / `=1` | `0`: constrói render pipelines pelo `MTLDevice` como antes, sem bases não especializadas e sem arquivo (o padrão do Mac é ligado). `1`: liga-os no iOS, onde são desligados por padrão |
+| `DM_PSO_HYBRID=0` | Um desenho cujo pipeline ainda não está construído espera por ele, em vez de desenhar com o pipeline de pull do par enquanto isso (docs/development.md, "Hybrid pipelines") |
+| `DM_PSO_PREBUILD=0` ou `tool` | Nenhum prebuild das bases de pull no arquivo (no passo de prepare, ou em segundo plano sem um); `tool`: roda só o prebuild e sai (`DM_PSO_PREBUILD_DEPTH=zero`, `DM_PSO_PREBUILD_THREADS=<n>`) |
+| `DM_PSO_PAIRS=path` | A segunda tabela de pares do prebuild (padrão: `pso_pairs.tsv` ao lado do mapa de shaders) |
+| `DM_PSO_BUNDLE=pasta` ou `off` | O arquivo de pipelines feito offline (`dm/gfx/tools/pso_offline.py`): `<arquitetura de GPU>.mtl4a` e `prebuilt.tsv`, só leitura; quando cobre os pares de shaders o dispositivo não constrói bases de prebuild. O app iOS o define para sua pasta `pso/` quando tem uma (docs/development.md, "The pipeline archive made offline") |
+| `DM_PSO_WAITLOG=1` | Registra no log cada desenho que esperou mais de 20 ms pelo seu pipeline, com o motivo de nenhum substituto tê-lo atendido |
+| `DM_PSO_PULL_ALL=1` | Diagnóstico: todo desenho que tem um pipeline de pull desenha com ele |
 
-Logging and capture:
+Logging e captura:
 
-| Switch | Effect |
+| Chave | Efeito |
 |---|---|
-| `DM_NVN_LOG=1` | Logs the creation of NVN objects |
-| `DM_NVN_FRAMES=N` | Prints the call table frame by frame for the first N frames (default 3) |
-| `DM_NVN_TSV=path` | Writes the per-frame call table and timings as TSV; adding `DM_NVN_TSV_CALLS=0` writes only the timing rows |
-| `DM_SLOWFRAME=1` | Writes the timing breakdown into the log only for the frames that dropped |
-| `DM_NVN_SHOT=frame[,frame…]:path` | Saves the swapchain texture as an image at the specified frames; `%d` in the path is replaced by the frame number |
-| `DM_NVN_SHOT_OUT=WxH` | Makes the screenshot above capture the picture after upscaling to this resolution instead |
-| `DM_NVN_TEXDUMP=frame:path` | Saves each color render target used in that frame as an image |
-| `DM_NVN_PASSDUMP=frame` or `start-end` | Writes each render pass's attachments, samples and presentation for these frames to standard error entry by entry, for analysis by `tools/tbdr_*.py`; additionally setting `DM_NVN_PASSDUMP_ALL` logs every draw |
-| `DM_NVN_PASSGPU=file` | Per-pass GPU time (requires device support for counter sampling at stage boundaries) |
-| `DM_NVN_PROF=1` | Wraps the implemented NVN functions in a timing wrapper and collects the time each function takes during recording |
+| `DM_NVN_LOG=1` | Registra a criação de objetos NVN |
+| `DM_NVN_FRAMES=N` | Imprime a tabela de chamadas quadro a quadro pelos primeiros N quadros (padrão 3) |
+| `DM_NVN_TSV=path` | Escreve a tabela de chamadas e os tempos por quadro como TSV; acrescentar `DM_NVN_TSV_CALLS=0` escreve só as linhas de tempo |
+| `DM_SLOWFRAME=1` | Escreve o detalhamento de tempos no log só para os quadros que caíram |
+| `DM_NVN_SHOT=frame[,frame…]:path` | Salva a textura de swapchain como imagem nos frames especificados; `%d` no caminho é trocado pelo número do quadro |
+| `DM_NVN_SHOT_OUT=LxA` | Faz a captura de tela acima pegar a imagem depois do upscaling para esta resolução, em vez disso |
+| `DM_NVN_TEXDUMP=frame:path` | Salva cada render target de cor usado naquele quadro como imagem |
+| `DM_NVN_PASSDUMP=frame` ou `inicio-fim` | Escreve os anexos, amostras e apresentação de cada render pass desses quadros no erro padrão entrada por entrada, para análise pelos `tools/tbdr_*.py`; definir também `DM_NVN_PASSDUMP_ALL` registra todo desenho |
+| `DM_NVN_PASSGPU=arquivo` | Tempo de GPU por pass (exige suporte do dispositivo a amostragem de contadores em fronteiras de estágio) |
+| `DM_NVN_PROF=1` | Envolve as funções NVN implementadas num wrapper de medição e coleta o tempo que cada função leva durante a gravação |
 
-Comparison and testing:
+Comparação e teste:
 
-| Switch | Effect |
+| Chave | Efeito |
 |---|---|
-| `DM_NVN_TBDR=1` | Turns on the pass optimizations of the replay layer (store / load elision, pass merging). They are off by default: they infer which textures a draw reads from its bound slots, which bindless textures defeat ([docs/agents/04-graphics.md](../../docs/agents/04-graphics.md) section 4) |
-| `DM_NVN_UNWRITTEN_DC=0` | With `DM_NVN_TBDR=1`, turns off the single item "attachments not written in this pass are not stored" |
-| `DM_NVN_FUSE_CHECK=1` | Same-frame check of pass merging; logs the comparison result every time |
-| `DM_NVN_CS_HOIST=0` | A compute dispatch between the draws of a pass ends it (by default it runs ahead of the pass when that changes nothing the draws before it read: [reference](../../docs/reference/rendering.md#compute-dispatches-between-the-draws-of-a-pass-run-ahead-of-it)) |
-| `DM_NVN_SLICE_MERGE=0` | Passes into other layers of one array or cube texture level stay apart (by default they run as one layered pass: [reference](../../docs/reference/rendering.md#passes-into-other-layers-of-one-texture-level-run-as-one-layered-pass)) |
-| `DM_FPS=30` or `60` | Pins the target frame rate |
-| `DM_NVN_BARRIER=game`, `DM_NVN_CUT` | Pass ordering and segment commits: see [docs/agents/04-graphics.md](../../docs/agents/04-graphics.md) section 7 |
-| `DM_PRESENT_HZ=N` | The frequency of presentation pacing (default 60); 0 means no frame limit and is for performance profiling only |
-| `DM_PRESENT_UPSCALE=metalfx` or `off` | How the present scales a picture smaller than its rectangle on the screen: `metalfx` through MetalFX's spatial scaler, `off` (the default) bilinearly. An option on both platforms (the iOS launcher's Upscaling; `env.txt` on the Mac); rendering at the screen's resolution stays the reference for sharpness ([reference](../../docs/reference/rendering.md#the-present-upscales-through-metalfx)) |
+| `DM_NVN_TBDR=1` | Liga as otimizações de pass da camada de replay (elisão de store / load, fusão de passes). Estão desligadas por padrão: elas inferem quais texturas um desenho lê a partir dos seus slots vinculados, o que texturas bindless derrotam ([docs/agents/04-graphics.md](../../docs/agents/04-graphics.md) seção 4) |
+| `DM_NVN_UNWRITTEN_DC=0` | Com `DM_NVN_TBDR=1`, desliga o único item "anexos não escritos neste pass não são armazenados" |
+| `DM_NVN_FUSE_CHECK=1` | Checagem de fusão de passes no mesmo quadro; registra o resultado da comparação todas as vezes |
+| `DM_NVN_CS_HOIST=0` | Um dispatch de compute entre os desenhos de um pass o encerra (por padrão ele roda adiantado em relação ao pass quando isso não muda nada que os desenhos antes dele leram: [referência](../../docs/reference/rendering.md#compute-dispatches-between-the-draws-of-a-pass-run-ahead-of-it)) |
+| `DM_NVN_SLICE_MERGE=0` | Passes em outras camadas de um nível de textura array ou cube ficam separados (por padrão rodam como um único pass em camadas: [referência](../../docs/reference/rendering.md#passes-into-other-layers-of-one-texture-level-run-as-one-layered-pass)) |
+| `DM_FPS=30` ou `60` | Fixa a taxa de quadros-alvo |
+| `DM_NVN_BARRIER=game`, `DM_NVN_CUT` | Ordem de passes e submissões de segmentos: veja [docs/agents/04-graphics.md](../../docs/agents/04-graphics.md) seção 7 |
+| `DM_PRESENT_HZ=N` | A frequência do ritmo de apresentação (padrão 60); 0 significa sem limite de quadros e é só para perfis de desempenho |
+| `DM_PRESENT_UPSCALE=metalfx` ou `off` | Como a apresentação escala uma imagem menor que seu retângulo na tela: `metalfx` pelo escalador espacial do MetalFX, `off` (o padrão) bilinearmente. Uma opção em ambas as plataformas (o Upscaling do launcher iOS; `env.txt` no Mac); renderizar na resolução da tela continua sendo a referência de nitidez ([referência](../../docs/reference/rendering.md#the-present-upscales-through-metalfx)) |
 
-## Known limitations
+## Limitações conhecidas
 
-The following paths are not implemented and report red in the log when reached (`RED_ONCE` in `nvn/nvn_mtl.m`):
+Os caminhos a seguir não estão implementados e reportam vermelho no log quando alcançados (`RED_ONCE` em `nvn/nvn_mtl.m`):
 
-- clears in the middle of a render pass, and color clears with a partial mask or partial scissor;
-- indexed quad primitives (8-bit indices are widened to 16-bit at replay);
-- some forms of texture-to-texture copy and texture clear.
+- limpezas no meio de um render pass, e limpezas de cor com máscara parcial ou scissor parcial;
+- primitivos de quad indexados (índices de 8 bits são alargados para 16 bits no replay);
+- algumas formas de cópia de textura para textura e limpeza de textura.
 
-Functions listed in `g_nops`, such as `MultiDraw*IndirectCount` and `SetDepthBounds`, are empty implementations: calling them neither reports red nor has any effect. `Downsample` / `DownsampleTextureView` are recorded as texture copies with a host flag (`DM_COPY_RESOLVE`) and replayed as a Metal multisample resolve.
+Funções listadas em `g_nops`, como `MultiDraw*IndirectCount` e `SetDepthBounds`, são implementações vazias: chamá-las não reporta vermelho nem tem efeito algum. `Downsample` / `DownsampleTextureView` são gravados como cópias de textura com uma flag do host (`DM_COPY_RESOLVE`) e reproduzidos como uma resolução de multiamostragem do Metal.
