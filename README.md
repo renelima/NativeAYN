@@ -1,170 +1,78 @@
-<p align="center"><img src="android/images/logo.png" alt="NativeAYN logo" width="128"></p>
+<p align="center"><img src="android/images/logo.png" alt="Logo do NativeAYN" width="140"></p>
 
-# NativeAYN
+<h1 align="center">NativeAYN</h1>
 
-**NativeAYN runs Switch 2 games' own code natively on Android, with their graphics rebuilt on Vulkan.** This release is
-**NativeAYN 1.0.0**.
+<p align="center"><b>Seus jogos de Switch 2 rodando de forma nativa no seu Android portátil.</b></p>
 
-It is not an emulator: the game's own ARM64 code runs directly on the phone's CPU. A small host answers the system calls the game
-makes, and the game's NVN graphics (including the Switch 2's task and mesh shaders) are replayed on Vulkan, with the game's shaders
-translated once, ahead of time, from your own dump.
+<p align="center">
+<a href="#como-funciona">Como funciona</a> ·
+<a href="#recursos">Recursos</a> ·
+<a href="#jogos">Jogos</a> ·
+<a href="#instalar">Instalar</a> ·
+<a href="#compilar">Compilar</a> ·
+<a href="#aviso-legal">Aviso legal</a>
+</p>
 
-Not affiliated with Nintendo, any game publisher, or the projects credited in [NOTICE.md](NOTICE.md); please report problems in this
-repository's Issues, not to them. https://github.com/renelima/NativeAYN/issues
+---
 
-> [!CAUTION]
-> Nothing from any game is in this repository or in the app: no game code, no game data, no keys, no firmware, no shader libraries.
-> Use only your own, legally owned game dumps. Do not ask for games, keys or dumps, and do not share them in Issues.
+O **NativeAYN** é um jogador nativo para Android: ele executa o **código ARM64 original do seu próprio jogo** de Switch 2 direto no processador do aparelho, com os gráficos reconstruídos em Vulkan. Nada é emulado por interpretação — o jogo roda como ele mesmo, e o NativeAYN responde às chamadas de sistema que ele espera encontrar.
 
-## The name
+Projetado desde o primeiro dia para **portáteis Android** (AYN Odin e semelhantes): tela sempre ativa durante o jogo, controles físicos configuráveis por interface e escolha de driver GPU por jogo.
 
-Anka is the Zumruduanka (ZÃ¼mrÃ¼dÃ¼anka) of Turkish myth, the phoenix that rises from its ashes; here the games
-rise again on a phone, from their own code.
+## Como funciona
 
-## Games
+Três peças trabalham juntas:
 
-| Game | Title ID | Version | Status |
-|---|---|---|---|
-| The Legend of Zelda: Ocarina of Time (Switch 2) | `0400486024DEC000` | update v131072 (`.nup` dump) | **Experimental, playable with problems.** Measured on one phone (below) |
-| Donkey Kong Bananza | `040074A01BF12000` | update 458752 | Played on Android before NativeAYN's changes; **not tested again since** |
-| Mario Kart World | `0400C3F00006E000` | 1.8.0 (base game) | Experimental before NativeAYN's changes (in game and driving, with graphics problems); **not tested again since** |
+1. **O jogo** — o executável do seu dump é reescrito uma única vez (o "pack"), trocando chamadas incompatíveis por equivalentes do Android. Depois disso, é o código da Nintendo/terceiros que roda na sua CPU.
+2. **O host** — uma camada fina que atende as chamadas de sistema do jogo (memória, threads, filesystem, áudio) e traduz os gráficos NVN do Switch 2 para Vulkan, incluindo task shaders e mesh shaders.
+3. **O launcher** — onde você adiciona o jogo, escolhe driver, mapeia o controle e acompanha o log de cada execução.
 
-Other versions are refused with a message that says which version the app needs. Each game is built into its own app
-(for example **NativeAYN** with the id `dev.ankanative.android.oot` for Ocarina of Time).
+Os shaders do jogo são traduzidos uma vez, antes de jogar, e ficam no pack — não há compilação surpresa em plena gameplay além do cache normal do driver.
 
-**Measured in Ocarina of Time, on one phone.** Every number here comes from a POCO F8 Pro (Snapdragon, Adreno 830, 12 GB of RAM) with a
-Turnip driver, playing the game from a `.nup` dump. No other phone was tried, and Donkey Kong Bananza and Mario Kart World were not run
-with these changes.
+## Recursos
 
-- From the save it loads into Kokiri Forest and Link's house; it stayed in the forest for 18 minutes without being closed, and saving
-  from the pause menu (System > Save) worked.
-- Frame rate at the start of the game: 12.7-16.2 fps (it was 4.8-5.4 before the shader page index). GPU time at Link's house 59.1 ms a
-  frame (from 121.6 ms). Not 30 fps: the forest's terrain shaders are still the main cost.
-- At a low frame rate the game now runs at about 0.8-1.0 of its normal speed (it was about a quarter at 15 fps).
-- Memory is the limit on 12 GB: about 10 of the phone's 10.9 GiB were in use while it played, and Android closed background apps. With
-  the RAM saver on, total RAM use was 9.6 GB.
+- **🎮 Mapeamento de controles nativo** — seção *Controller* no painel lateral: toque no botão do jogo, aperte o botão do seu aparelho, gravado. Por controle conectado, com deadzone ajustável e "aprender pressionando". É a primeira vez que isso existe em um projeto deste tipo.
+- **🔌 Driver GPU por jogo** — instale drivers Turnip (`.zip`/`.adpkg`) e escolha qual cada jogo usa; cache de pipelines por driver para a segunda partida começar quente.
+- **🔒 Tela sempre ativa** — o jogo nunca bloqueia a tela do portátil no meio de uma sessão.
+- **📜 Log por execução** — cada partida gera um log nomeado; o seletor de problemas de versão de build fica no próprio app.
+- **🧩 Perfis por jogo** — constantes e correções específicas de cada título vivem em `dm/games/<title-id>/`, não no código.
 
-What changed, with more numbers: [CHANGELOG_NATIVEAYN.md](CHANGELOG_NATIVEAYN.md). The game's notes:
-[dm/games/0400486024DEC000/README.md](dm/games/0400486024DEC000/README.md).
+## Jogos
 
-## What you need
+| Jogo | Title ID | Situação no NativeAYN |
+|---|---|---|
+| **The Legend of Zelda: Ocarina of Time** (Switch 2) | `0400486024DEC000` | **Jogável (experimental)** — principal alvo de desenvolvimento; medido em AYN Odin 3 (Adreno 830, Android 15) |
+| Donkey Kong Bananza | `040074A01BF12000` | Perfil presente; não revalidado nesta variante |
+| Mario Kart World | `0400C3F00006E000` | Perfil presente; não revalidado nesta variante |
 
-- Android 13 or newer, a 64-bit phone with a **Snapdragon (Adreno) GPU** and **12-16 GB of RAM**. Only a 12 GB POCO F8 Pro (Adreno 830)
-  was tried with this release; with 12 GB, memory is tight.
-- **Less than 16 GB of RAM: turn the RAM saver on** (the game's â‹¯ â€º Game settings â€º RAM saver). Without it Android may close the
-  game in heavy areas; with it, total RAM use in Ocarina of Time dropped to 9.6 GB on the 12 GB test phone. It costs storage writes
-  (about 2 GB per area load) and needs that much free space.
-- A Vulkan driver with `VK_EXT_map_memory_placed`. Phone drivers often lack it (the POCO F8 Pro's own Qualcomm driver does): install a
-  Turnip driver, such as the [Anka Turnip driver](#the-anka-turnip-driver). The app's readiness check (Settings > Readiness check)
-  says whether yours has it.
-- **Your own game dump**, of a game you legally own: a `.nup` file or a dump folder (`base/` with `exefs/` and `romfs/`, and
-  `updates/<version>/` if any). NSP and XCI files do not work for Switch 2 games. No keys or firmware are needed.
-- Time to prepare the game once (see "Install"): on the phone itself (new in 0.2.0, experimental), or on a computer (Windows, Linux or Mac).
-- Free storage on the phone: the prepared game (the pack, with its shader library) is a few hundred MB to a few GB; the RAM saver writes
-  about 2 GB per area load.
-- Optional: your own `Lossless.dll` from Lossless Scaling for Windows, for frame generation (never included).
+O APK é montado por jogo: cada build carrega o perfil dos títulos selecionados (veja [Compilar](#compilar)).
 
-## Download and check
+## Instalar
 
-The release has the APK (`anka-native-<version>.apk`, app id `dev.ankanative.android`) and `SHA256SUMS.txt`. To check a download on a computer:
-`sha256sum -c SHA256SUMS.txt --ignore-missing` (on a Mac: `shasum -a 256 -c SHA256SUMS.txt`). Only download the app from this
-repository's Releases: a copy from anywhere else may be modified.
+1. Baixe o APK em [Releases](https://github.com/renelima/NativeAYN/releases) (quando publicado) e instale no aparelho (Android 13+).
+2. Abra o app, conceda o acesso a arquivos e toque em **Add game**, apontando para a pasta do **seu dump** (a que tem `base/` e `updates/`) ou para o arquivo `.nup` do seu jogo.
+3. Em aparelhos Adreno, instale um driver Turnip em *Settings › GPU driver* e selecione-o no jogo.
 
-## Install
+## Compilar
 
-This is an experimental build with no warranty ([LICENSE](LICENSE)).
+Ambiente: WSL2 (ou Linux) com Android SDK/NDK 28 e JDK 17. Do diretório `android/app`:
 
-**On the phone** (new in 0.2.0, experimental): copy the dump (or the `.nup`) to the phone, install the APK, open **NativeAYN**, allow
-**All files access**, tap **Add game**, pick the dump and tap **Prepare**. The app rewrites the game's code and translates its shaders in
-the background, with a notification (keep the phone charging: it takes a long time, over an hour for Ocarina of Time). When it is done,
-the game's card says Ready; tap **Play**. If anything fails, the card says why and keeps its log; preparing on a computer still works.
-
-**On a computer** (Windows, Linux or Mac):
-
-1. **Prepare the game on a computer**, once: make the environment and run `scripts/pack_android.py` on your dump, as
-   [android/README.md](android/README.md#the-environment) describes ([Pack a game](android/README.md#pack-a-game)). It rewrites the
-   game's code for Android and translates its shaders for Vulkan into a pack (`<title ID>-work/android-pack`, next to the dump).
-   Ocarina of Time has about 42,000 shaders: this takes a long time and needs .NET and several GB of free disk.
-2. Copy the dump (or the `.nup`) to the phone, for example to `Switch2/`, and the pack next to it as
-   `Switch2/<title ID>-work/android-pack`. The pack is made from your dump for your phone: never share it.
-3. Install the APK, open **NativeAYN** and allow **All files access**.
-4. Install a GPU driver if the readiness check asks for one ([below](#the-anka-turnip-driver)).
-5. Tap **Add game** and pick the dump folder or the `.nup`. The app finds the pack next to it; tap **Play**.
-
-Saves are kept in the app's own storage (`Android/data/<app id>/files/saves`). When you uninstall, Android asks whether to keep that
-data. A game's â‹¯ menu backs saves up to `Switch2/save-backups/<title ID>/` (kept when the app is uninstalled) and restores them.
-NativeAYN has its own app id, so it installs beside other builds and does not see their saves; move a save with the game's
-â‹¯ menu (back up in one app, restore in the other).
-
-## The Anka Turnip driver
-
-The games run on Turnip, Mesa's open Vulkan driver for Adreno GPUs. The Anka Turnip driver is a Turnip build prepared for this project:
-https://github.com/EddizEge/AnkaTurnip (download its release zip). In the app: Settings > **GPU driver** > **Install...** > **Pick a
-zip...**, then start the game again. Settings > GPU driver also offers to download community Turnip builds. A driver is never part of
-this repository or of the APK.
-
-## Settings
-
-The gear on the main screen holds the app's settings; a game's â‹¯ menu > **Game settings** holds that game's own.
-
-| Setting | What it does |
-|---|---|
-| **RAM saver (uses storage)** (Game settings) | Off by default; **turn it on if your phone has less than 16 GB of RAM**. The game's large textures live in a file in the app's cache folder instead of in RAM, so Android can drop and reload them instead of closing the game. For phones short of RAM with free storage; it writes about 2 GB to storage per area load in Ocarina of Time |
-| Frame-rate cap | the game's own, 60, 30, 20 or 15 fps |
-| Game resolution | the phone's 1080p or the game's own |
-| GPU driver | the Vulkan driver the game runs on (the system's, or an installed Turnip zip) |
-| Frame generation | Lossless Scaling's frame generation (2x, 3x, 4x or a target frame rate); needs your own `Lossless.dll` |
-| Performance overlay | fps, GPU time, throttling and battery over the game |
-| Readiness check | what the phone is missing for a game, with a button to fix most items |
-
-On-screen controls have a layout editor; gamepads work. Every switch the host reads is listed in
-[docs/env_switches.tsv](docs/env_switches.tsv); a game's tested settings are in its profile.
-
-## Known issues
-
-- **Ocarina of Time is slow**: about 12-16 fps at the start, lower in open areas. The forest's terrain shaders are the main cost.
-- **Memory on 12 GB phones**: Android may close the game after a long session or in a heavy area; it closes background apps while the
-  game runs. Turn the RAM saver on (recommended below 16 GB of RAM). Back up your saves often.
-- **Textures** may pop in while walking (textures released under memory pressure are made again) and **shimmer**; some foliage is
-  **black** (mesh shaders).
-- **Short stalls while walking** come from pipelines built late and from memory pressure.
-- **Anti-aliasing** is not visible yet: the game's SMAA pass runs, but its blend weights are all zero.
-- Donkey Kong Bananza and Mario Kart World were **not tested** with NativeAYN's changes. Only one phone was tried.
-- The phone gets hot, and the frame rate drops when it throttles.
-
-## Feedback
-
-Tell us how it runs on your phone in [Discussions](https://github.com/renelima/NativeAYN/discussions): the
-[device reports](https://github.com/renelima/NativeAYN/discussions/1) thread has a short template (phone, RAM, driver, game, frame rate, what works
-and what does not). Bugs you can reproduce go to [Issues](https://github.com/renelima/NativeAYN/issues). Settings â€º Share log sends the app's
-newest log. Never post game files, keys or packs.
-
-## Building
-
-How to set up the environment, prepare a game and build the APK: [android/README.md](android/README.md) (and
-[android/TESTING.md](android/TESTING.md) for testing on a phone). This release's APK was built with:
-
-```sh
-cd android/app
-./gradlew --no-daemon -q -PnxGames=0400486024DEC000 -PnxApp=oot -PnxPackEngine=fake apk   # -> out/anka-native-oot.apk
+```bash
+gradle assembleDebug \
+  -PnxGame=0400486024DEC000 -PnxGames=0400486024DEC000 \
+  -PnxAppId=dev.nativeayn.android -PnxPackEngine=fake
 ```
 
-`-PnxApp=<suffix>` sets the app id `dev.ankanative.android.<suffix>` and `-PnxLabel` its name; `-PnxPackEngine=fake` leaves out the
-on-phone packer. Signed releases are built with `android/tools/release.sh` ([docs/RELEASING.md](docs/RELEASING.md)). The icons are made by `android/tools/anka_icons.py`. The Mac and iPhone builds this repository also holds are
-described in [docs/mac-and-iphone.md](docs/mac-and-iphone.md).
+O APK resultante (`build/outputs/apk/debug/`) embute o host do jogo escolhido. Testes do hospedeiro C: `make -C dm/host/tests` (inclui os testes de mapeamento de controle).
 
-## AI disclosure
+## Contribuindo
 
-Most of NativeAYN's code, its commit messages and these documents were written by an AI coding assistant (Claude Opus 5.5, by
-Anthropic) working under the direction of the human maintainer, who decided what to try, played and tested the builds on his phone, and
-is responsible for the release. Many of the measurements were taken by automated runs on that phone. It is experimental and has bugs.
+Relatos de compatibilidade vão em [Discussions](https://github.com/renelima/NativeAYN/discussions); bugs reproduzíveis, em [Issues](https://github.com/renelima/NativeAYN/issues). PRs são bem-vindos — abra uma issue antes para mudanças grandes. Docs técnicas do hospedeiro estão em `docs/` e `AGENTS.md` (inglês).
 
-## License
+## Aviso legal
 
-Most of the code is MIT ([LICENSE](LICENSE)); the frame generation port (`dm/gfx/vk_android/lsfg`), one shader translator file
-(`InstEmitAmpereMesh.cs`) and the Anka mark's script (`android/tools/anka_logo.py`) are GPL-3.0-or-later. **The Android app is GPL-3.0-or-later as a whole**, because it links GPL-3.0-or-later parts (frame
-generation, and the shader translator in an APK that carries the on-phone packer); its source is this repository at the commit in the
-app's build tag. Credits, third-party code and their licenses: [NOTICE.md](NOTICE.md). The Anka mark and its icons are the base
-project's own design, GPL-3.0-or-later. The app's About section names the license and points to NOTICE.md.
+Use **apenas dumps próprios e legalmente adquiridos** dos seus jogos. Este repositório e o app não contêm nem distribuem código de jogos, dados, chaves, firmwares ou bibliotecas de shaders. O NativeAYN não tem afiliação com Nintendo ou com qualquer publicadora; problemas devem ser reportados aqui, nunca aos detentores dos jogos.
 
-Use only games you own. Do not ask for games, keys or dumps.
+## Créditos e licença
+
+O NativeAYN tem base no projeto **Anka Native**, de EddizEge, e nas tecnologias creditadas em [NOTICE.md](NOTICE.md). A identidade visual (logo, marca "N", paleta Deep Space) e a feature de mapeamento de controles são originais deste projeto. Licença: [LICENSE](LICENSE) (GPL-3.0-or-later, conforme NOTICE).
