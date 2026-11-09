@@ -1,19 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Dark mode: the Anka tile's warm night with the same fire colours -->
-    <color name="bn_bg">#FF160A08</color>
-    <color name="bn_card">#FF241210</color>
-    <color name="bn_card_stroke">#FF3E1E18</color>
-    <color name="bn_tint">#FF3E1D12</color>
-    <color name="bn_banana">#FFFFA43C</color>
-    <color name="bn_banana_deep">#FFFF7A2A</color>
-    <color name="bn_on_banana">#FF3A1210</color>
-    <color name="bn_text">#FFFFEBDD</color>
-    <color name="bn_text_2">#FFD2A88E</color>
-    <color name="bn_accent">#FFFFB24A</color>
-    <color name="bn_leaf">#FF7FC79A</color>
-    <color name="bn_on_leaf">#FF10241A</color>
-    <color name="bn_danger">#FFFF8A6A</color>
-    <color name="bn_danger_tint">#FF3D1A14</color>
-    <color name="bn_warn_tint">#FF422414</color>
+    <!-- NativeAYN is dark by design: the night set is the day set (see values/colors.xml) -->
+    <color name="bn_bg">#FF0B1220</color>
+    <color name="bn_card">#FF141E30</color>
+    <color name="bn_card_stroke">#FF24344E</color>
+    <color name="bn_tint">#FF1C2A42</color>
+    <color name="bn_banana">#FF2DD4BF</color>
+    <color name="bn_banana_deep">#FF0D9488</color>
+    <color name="bn_on_banana">#FF062A25</color>
+    <color name="bn_text">#FFE8EEF8</color>
+    <color name="bn_text_2">#FF9FB2CC</color>
+    <color name="bn_accent">#FF2DD4BF</color>
+    <color name="bn_leaf">#FF34D399</color>
+    <color name="bn_on_leaf">#FF06231A</color>
+    <color name="bn_danger">#FFF87171</color>
+    <color name="bn_danger_tint">#FF3A1E24</color>
+    <color name="bn_warn_tint">#FF3A2E1A</color>
 </resources>

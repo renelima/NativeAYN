@@ -10,7 +10,7 @@ makes, and the game's NVN graphics (including the Switch 2's task and mesh shade
 translated once, ahead of time, from your own dump.
 
 Not affiliated with Nintendo, any game publisher, or the projects credited in [NOTICE.md](NOTICE.md); please report problems in this
-repository's Issues, not to them. https://github.com/nativeayn/nativeayn/issues
+repository's Issues, not to them. https://github.com/renelima/NativeAYN/issues
 
 > [!CAUTION]
 > Nothing from any game is in this repository or in the app: no game code, no game data, no keys, no firmware, no shader libraries.
@@ -18,7 +18,7 @@ repository's Issues, not to them. https://github.com/nativeayn/nativeayn/issues
 
 ## The name
 
-Anka is the Zumruduanka (Zümrüdüanka) of Turkish myth, the phoenix that rises from its ashes; here the games
+Anka is the Zumruduanka (ZÃ¼mrÃ¼dÃ¼anka) of Turkish myth, the phoenix that rises from its ashes; here the games
 rise again on a phone, from their own code.
 
 ## Games
@@ -51,7 +51,7 @@ What changed, with more numbers: [CHANGELOG_NATIVEAYN.md](CHANGELOG_NATIVEAYN.md
 
 - Android 13 or newer, a 64-bit phone with a **Snapdragon (Adreno) GPU** and **12-16 GB of RAM**. Only a 12 GB POCO F8 Pro (Adreno 830)
   was tried with this release; with 12 GB, memory is tight.
-- **Less than 16 GB of RAM: turn the RAM saver on** (the game's ⋯ › Game settings › RAM saver). Without it Android may close the
+- **Less than 16 GB of RAM: turn the RAM saver on** (the game's â‹¯ â€º Game settings â€º RAM saver). Without it Android may close the
   game in heavy areas; with it, total RAM use in Ocarina of Time dropped to 9.6 GB on the 12 GB test phone. It costs storage writes
   (about 2 GB per area load) and needs that much free space.
 - A Vulkan driver with `VK_EXT_map_memory_placed`. Phone drivers often lack it (the POCO F8 Pro's own Qualcomm driver does): install a
@@ -92,9 +92,9 @@ the game's card says Ready; tap **Play**. If anything fails, the card says why a
 5. Tap **Add game** and pick the dump folder or the `.nup`. The app finds the pack next to it; tap **Play**.
 
 Saves are kept in the app's own storage (`Android/data/<app id>/files/saves`). When you uninstall, Android asks whether to keep that
-data. A game's ⋯ menu backs saves up to `Switch2/save-backups/<title ID>/` (kept when the app is uninstalled) and restores them.
+data. A game's â‹¯ menu backs saves up to `Switch2/save-backups/<title ID>/` (kept when the app is uninstalled) and restores them.
 NativeAYN has its own app id, so it installs beside other builds and does not see their saves; move a save with the game's
-⋯ menu (back up in one app, restore in the other).
+â‹¯ menu (back up in one app, restore in the other).
 
 ## The Anka Turnip driver
 
@@ -105,7 +105,7 @@ this repository or of the APK.
 
 ## Settings
 
-The gear on the main screen holds the app's settings; a game's ⋯ menu > **Game settings** holds that game's own.
+The gear on the main screen holds the app's settings; a game's â‹¯ menu > **Game settings** holds that game's own.
 
 | Setting | What it does |
 |---|---|
@@ -134,9 +134,9 @@ On-screen controls have a layout editor; gamepads work. Every switch the host re
 
 ## Feedback
 
-Tell us how it runs on your phone in [Discussions](https://github.com/nativeayn/nativeayn/discussions): the
-[device reports](https://github.com/nativeayn/nativeayn/discussions/1) thread has a short template (phone, RAM, driver, game, frame rate, what works
-and what does not). Bugs you can reproduce go to [Issues](https://github.com/nativeayn/nativeayn/issues). Settings › Share log sends the app's
+Tell us how it runs on your phone in [Discussions](https://github.com/renelima/NativeAYN/discussions): the
+[device reports](https://github.com/renelima/NativeAYN/discussions/1) thread has a short template (phone, RAM, driver, game, frame rate, what works
+and what does not). Bugs you can reproduce go to [Issues](https://github.com/renelima/NativeAYN/issues). Settings â€º Share log sends the app's
 newest log. Never post game files, keys or packs.
 
 ## Building

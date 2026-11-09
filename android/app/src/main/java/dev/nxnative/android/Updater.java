@@ -68,7 +68,7 @@ import javax.net.ssl.HttpsURLConnection;
 final class Updater {
     private Updater() {}
 
-    static final String REPO = "nativeayn/nativeayn";
+    static final String REPO = "renelima/NativeAYN";
     private static final String TAG = "nxupdate";
     private static final long MAX_APK = 1L << 30;
     private static final String ACTION = ".UPDATE_INSTALL_STATUS";

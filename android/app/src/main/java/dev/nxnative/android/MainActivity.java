@@ -14,6 +14,7 @@ import android.text.TextUtils;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
@@ -57,6 +58,7 @@ public final class MainActivity extends Activity {
 
     @Override protected void onCreate(Bundle saved) {
         super.onCreate(saved);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);   // the screen stays lit while the launcher is open (it is dropped when the app leaves the foreground)
         if (saved != null) settingsPage = saved.getBoolean("settings");
         FrameLayout frame = new FrameLayout(this);
         bananas = new BananaBackgroundView(this);
@@ -98,14 +100,14 @@ public final class MainActivity extends Activity {
     private void build() {
         FrameLayout frame = (FrameLayout) bananas.getParent();
         while (frame.getChildCount() > 1) frame.removeViewAt(1);
-        LinearLayout content = Ui.page(this, frame, 640);
+        LinearLayout content = Ui.page(this, frame, 760);
         if (settingsPage) buildSettings(content);
         else buildHome(content);
     }
 
     private void buildHome(LinearLayout content) {
         overlayRow = null;
-        content.addView(Ui.header(this, Ui.badge(this, 44), "NativeAYN", Prefs.buildId(), Ui.iconButton(this, R.drawable.ic_settings, "Settings", Ui.Kind.TONAL, v -> page(true))));   // the build identifier under the title (Prefs.buildId, the part of the overlay's build tag after the app's name), so a screenshot of Home names its build; Settings › About has the full tag
+        content.addView(Ui.header(this, Ui.badge(this, 48), "NativeAYN", Prefs.buildId(), Ui.iconButton(this, R.drawable.ic_settings, "Settings", Ui.Kind.TONAL, v -> page(true))));   // the build identifier under the title (Prefs.buildId, the part of the overlay's build tag after the app's name), so a screenshot of Home names its build; Settings › About has the full tag
         accessCard = accessCard();
         Ui.add(content, accessCard, 16);
         Ondevice.attach(this, content, content.getChildCount());   // a game being prepared and its progress (hidden when there is none)
@@ -318,7 +320,7 @@ public final class MainActivity extends Activity {
         ImageView im = new ImageView(this);
         im.setImageResource(R.drawable.anka_mark);
         im.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-        c.addView(im, new LinearLayout.LayoutParams(dp(80), dp(80)));
+        c.addView(im, new LinearLayout.LayoutParams(dp(96), dp(96)));
         TextView h = Ui.heading(this, "Add your game");
         h.setGravity(Gravity.CENTER);
         Ui.add(c, h, 12, Ui.wrap());
@@ -346,11 +348,11 @@ public final class MainActivity extends Activity {
         LinearLayout c = Ui.card(this);
         c.setPadding(dp(16), dp(16), dp(16), dp(16));
         LinearLayout top = Ui.row(this);
-        top.addView(Ui.tile(this, g.name, 52));
+        top.addView(Ui.tile(this, g.name, 64));
         LinearLayout info = new LinearLayout(this);
         info.setOrientation(LinearLayout.VERTICAL);
         info.setPadding(dp(14), 0, dp(4), 0);
-        TextView name = Ui.text(this, g.name, 17, R.color.bn_text, 700);
+        TextView name = Ui.text(this, g.name, 19, R.color.bn_text, 700);
         name.setMaxLines(2);
         name.setEllipsize(TextUtils.TruncateAt.END);
         info.addView(name);

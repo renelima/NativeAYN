@@ -96,7 +96,7 @@ code), `ANKA_GAMES` (default `0400486024DEC000`; several are comma-separated), `
 
 ## 5. Publish
 
-1. Push the released commit (and its tag) to `github.com/nativeayn/nativeayn` **before or together with** the APK: the APK is GPL-3.0-or-later as a whole,
+1. Push the released commit (and its tag) to `github.com/renelima/NativeAYN` **before or together with** the APK: the APK is GPL-3.0-or-later as a whole,
    so its complete source (this repository at the commit in the app's build tag) must be available to everyone who gets it ([NOTICE.md](../NOTICE.md)).
 2. Create a GitHub release (tag `v<version>`, marked as a pre-release) and upload only the APK and `SHA256SUMS.txt`. The in-app updater takes the
    release's first `.apk` asset and checks it against GitHub's SHA-256 digest of it.

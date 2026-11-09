@@ -25,13 +25,13 @@ import android.widget.Switch;
 import android.widget.TextView;
 
 /**
- * The launcher's building blocks, in code like the rest of the launcher (no layouts, no AndroidX), in the banana palette (res/values/colors.xml, values-night for dark
- * mode; themes.xml's Theme.Banana). One small design system so every screen looks the same:
+ * The launcher's building blocks, in code like the rest of the launcher (no layouts, no AndroidX), in the NativeAYN palette (res/values/colors.xml, always dark;
+ * themes.xml's Theme.Banana). One small design system so every screen looks the same:
  * <ul>
  * <li>Type: page title 24 sp heavy, heading 18 sp bold, body 15 sp, small 13 sp, section label 12 sp caps; buttons 15 sp semibold, one line.</li>
- * <li>Shapes: cards 20 dp corners with a hairline edge; buttons and icon buttons 14 dp corners (a card's big action 16 dp).</li>
- * <li>Spacing: every page has the same gutter (20 dp, 16 dp on a narrow screen), the same header (Ui.header: 56 dp, 8 dp under the status bar); cards 18 dp inside,
- * 12 dp between cards, 24 dp before a section label.</li>
+ * <li>Shapes: cards 16 dp corners with a hairline edge; buttons and icon buttons 10 dp corners (a card's big action 12 dp).</li>
+ * <li>Spacing: every page has the same gutter (20 dp, 16 dp on a narrow screen), the same header (Ui.header: 64 dp over a 2 dp teal accent rule, 8 dp under the status
+ * bar); cards 16 dp inside, 12 dp between cards, 24 dp before a section label.</li>
  * <li>Button and header icons are vector drawables (res/drawable/ic_*.xml) tinted from the palette, so they look the same on every phone; list rows keep their
  * emoji tiles.</li>
  * </ul>
@@ -54,12 +54,12 @@ final class Ui {
         return g;
     }
 
-    /** A touch ripple in peel brown over a shape (the shape is its mask) */
+    /** A touch ripple in teal over a shape (the shape is its mask) */
     static Drawable ripple(Context c, GradientDrawable shape) {
         GradientDrawable mask = new GradientDrawable();   // an opaque copy of the shape: a transparent button (QUIET) still shows its ripple
         mask.setColor(Color.BLACK);
         mask.setCornerRadius(shape.getCornerRadius());
-        return new RippleDrawable(ColorStateList.valueOf(0x336B4423), shape, mask);
+        return new RippleDrawable(ColorStateList.valueOf(0x332DD4BF), shape, mask);
     }
 
     static Typeface face(int weight) { return Typeface.create(Typeface.SANS_SERIF, weight, false); }
@@ -94,17 +94,19 @@ final class Ui {
     static TextView body(Context c, CharSequence s) { return text(c, s, 15, R.color.bn_text, 400); }
     static TextView small(Context c, CharSequence s) { return text(c, s, 13, R.color.bn_text_2, 400); }
 
-    /** A rounded little label (the build tag, a step) */
+    /** A rounded little label (the build tag, a step), with a hairline edge */
     static TextView chip(Context c, CharSequence s) {
         TextView t = text(c, s, 12, R.color.bn_text_2, 600);
-        t.setBackground(round(col(c, R.color.bn_tint), dp(c, 999), 0, 0));
+        t.setBackground(round(col(c, R.color.bn_tint), dp(c, 999), col(c, R.color.bn_card_stroke), dp(c, 1)));
         t.setPadding(dp(c, 10), dp(c, 5), dp(c, 10), dp(c, 5));
         return t;
     }
 
-    /** A group's label above its card (the settings page, a sheet) */
+    /** A group's label above its card (the settings page, a sheet), opened by a teal bracket */
     static TextView section(Context c, CharSequence s) {
-        TextView t = text(c, s, 12, R.color.bn_text_2, 700);
+        android.text.SpannableString label = new android.text.SpannableString("\u258D " + s);
+        label.setSpan(new android.text.style.ForegroundColorSpan(col(c, R.color.bn_banana)), 0, 1, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        TextView t = text(c, label, 12, R.color.bn_text_2, 700);
         t.setAllCaps(true);
         t.setLetterSpacing(0.08f);
         t.setPadding(dp(c, 4), 0, 0, 0);
@@ -136,13 +138,15 @@ final class Ui {
         return t;
     }
 
-    /** A game's tile: the first letter of its name on banana yellow, rounded */
+    /** A game's tile: the first letter of its name on a teal gradient (light top, deep bottom), rounded */
     static TextView tile(Context c, String name, int sizeDp) {
         String n = name == null ? "" : name.trim();
         TextView t = text(c, n.isEmpty() ? "?" : n.substring(0, n.offsetByCodePoints(0, 1)).toUpperCase(java.util.Locale.ROOT), sizeDp * 0.4f, R.color.bn_on_banana, 800);
         t.setGravity(Gravity.CENTER);
         t.setIncludeFontPadding(false);
-        t.setBackground(round(col(c, R.color.bn_banana), dp(c, 16), 0, 0));
+        GradientDrawable tileBg = round(col(c, R.color.bn_banana), dp(c, 16), 0, 0);
+        tileBg.setColors(new int[]{0xFF5EEAD4, col(c, R.color.bn_banana_deep)});   // the NativeAYN teal gradient
+        t.setBackground(tileBg);
         t.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         t.setLayoutParams(new LinearLayout.LayoutParams(dp(c, sizeDp), dp(c, sizeDp)));
         return t;
@@ -150,12 +154,12 @@ final class Ui {
 
     // ---- Containers ----
 
-    /** A card: rounded, a hairline peel edge, vertical, 18 dp inside */
+    /** A card: rounded, a hairline edge, vertical, 16 dp inside (NativeAYN: tighter 16 dp corners, a cockpit feel) */
     static LinearLayout card(Context c) {
         LinearLayout l = new LinearLayout(c);
         l.setOrientation(LinearLayout.VERTICAL);
-        l.setBackground(round(col(c, R.color.bn_card), dp(c, 20), col(c, R.color.bn_card_stroke), dp(c, 1)));
-        int p = dp(c, 18);
+        l.setBackground(round(col(c, R.color.bn_card), dp(c, 16), col(c, R.color.bn_card_stroke), dp(c, 1)));
+        int p = dp(c, 16);
         l.setPadding(p, p, p, p);
         return l;
     }
@@ -239,15 +243,17 @@ final class Ui {
         return content;
     }
 
-    /** A page's header, the same on every screen: 56 dp high; a leading view (the banana badge, or a back button), the title, and an optional trailing button */
+    /** A page's header, the same on every screen: 64 dp over the accent rule; a leading view (the NativeAYN badge, or a back button), the title, and an optional trailing button */
     static LinearLayout header(Context c, View leading, CharSequence title, View trailing) { return header(c, leading, title, null, trailing); }
 
-    /** The same, with a small line under the title in the accent yellow (Home: the build identifier, Prefs.buildId), or none when null */
+    /** The same, with a small line under the title in the accent colour (Home: the build identifier, Prefs.buildId), or none when null. The header block carries NativeAYN's
+     *  accent rule: a 2 dp teal line fading out under the title, starting clear of the leading badge or back button */
     static LinearLayout header(Context c, View leading, CharSequence title, CharSequence subtitle, View trailing) {
         LinearLayout h = row(c);
-        h.setMinimumHeight(dp(c, 56));
+        h.setMinimumHeight(dp(c, 64));
         if (leading != null) h.addView(leading);
         TextView t = title(c, title);
+        t.setLetterSpacing(-0.015f);
         t.setAccessibilityHeading(true);
         int pad = dp(c, leading != null ? 14 : 4);
         if (subtitle == null) {
@@ -266,7 +272,17 @@ final class Ui {
             h.addView(col, weight());
         }
         if (trailing != null) h.addView(trailing);
-        return h;
+        LinearLayout box = new LinearLayout(c);   // the header row over its accent rule (NativeAYN's layout mark)
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.addView(h, fill());
+        View rule = new View(c);
+        rule.setBackground(new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT, new int[]{col(c, R.color.bn_banana), 0x002DD4BF}));   // teal, fading to a whisper
+        LinearLayout.LayoutParams rp = fill();
+        rp.height = dp(c, 2);
+        rp.leftMargin = dp(c, leading != null ? 62 : 4);
+        rp.topMargin = dp(c, 2);
+        box.addView(rule, rp);
+        return box;
     }
 
     /** The back button of a page's header */
@@ -320,7 +336,7 @@ final class Ui {
         b.setGravity(Gravity.CENTER);
         b.setIncludeFontPadding(false);
         b.setTextColor(col(c, textColor(k)));
-        style(c, b, k, 14);
+        style(c, b, k, 10);
         b.setOnClickListener(l);
         return b;
     }
@@ -338,7 +354,7 @@ final class Ui {
             setGravity(Gravity.CENTER);
             setMinimumHeight(dp(c, 56));
             setPadding(dp(c, 20), 0, dp(c, 20), 0);
-            style(c, this, k, 16);
+            style(c, this, k, 12);
             setClickable(true);
             setFocusable(true);
             icon = new ImageView(c);
@@ -373,7 +389,7 @@ final class Ui {
         ImageView v = new ImageView(c);
         v.setImageDrawable(icon(c, drawable, R.color.bn_text));
         v.setScaleType(ImageView.ScaleType.CENTER);
-        style(c, v, k, 14);
+        style(c, v, k, 10);
         v.setContentDescription(description);
         v.setClickable(true);
         v.setFocusable(true);
@@ -397,13 +413,13 @@ final class Ui {
         return r;
     }
 
-    /** The Anka mark in a circle of its tile colour (Home's header) */
+    /** The NativeAYN mark on its tile's gradient circle (Home's header) */
     static ImageView badge(Context c, int sizeDp) {
         ImageView v = new ImageView(c);
         v.setImageDrawable(new android.graphics.drawable.InsetDrawable(c.getDrawable(R.drawable.anka_mark), 0.12f));   // the mark sits inside the circle
         GradientDrawable g = new GradientDrawable();
         g.setShape(GradientDrawable.OVAL);
-        g.setColor(0xFF3A1210);
+        g.setColors(new int[]{0xFF123A5C, 0xFF0A1B33});   // the icon tile's gradient, kept from the launcher icon
         v.setBackground(g);
         v.setScaleType(ImageView.ScaleType.FIT_CENTER);
         v.setLayoutParams(new LinearLayout.LayoutParams(dp(c, sizeDp), dp(c, sizeDp)));
@@ -430,15 +446,15 @@ final class Ui {
         Setting(Context c, String emoji, String title, View.OnClickListener l) {
             view = row(c);
             view.setPadding(dp(c, 10), dp(c, 8), dp(c, 12), dp(c, 8));
-            view.setMinimumHeight(dp(c, 60));
-            view.setBackground(ripple(c, round(Color.TRANSPARENT, dp(c, 14), 0, 0)));
+            view.setMinimumHeight(dp(c, 64));
+            view.setBackground(ripple(c, round(Color.TRANSPARENT, dp(c, 12), 0, 0)));
             view.setOnClickListener(l);
             TextView tile = text(c, emoji, 18, R.color.bn_text, 400);
             tile.setGravity(Gravity.CENTER);
             tile.setIncludeFontPadding(false);
-            tile.setBackground(round(col(c, R.color.bn_tint), dp(c, 12), 0, 0));
+            tile.setBackground(round(col(c, R.color.bn_tint), dp(c, 14), 0, 0));
             tile.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-            view.addView(tile, new LinearLayout.LayoutParams(dp(c, 40), dp(c, 40)));
+            view.addView(tile, new LinearLayout.LayoutParams(dp(c, 44), dp(c, 44)));
             LinearLayout col = new LinearLayout(c);
             col.setOrientation(LinearLayout.VERTICAL);
             col.setPadding(dp(c, 14), 0, dp(c, 8), 0);

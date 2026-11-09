@@ -7,7 +7,7 @@ The credits for the code it is built on are in [NOTICE.md](NOTICE.md).
 
 ## NativeAYN 0.2.1
 
-- **Prepare on the phone stopped at the end for Ocarina of Time** ([#3](https://github.com/nativeayn/nativeayn/issues/3)): "76 of 42346 shaders did
+- **Prepare on the phone stopped at the end for Ocarina of Time** ([#3](https://github.com/renelima/NativeAYN/issues/3)): "76 of 42346 shaders did
   not build: no library written". The same 76 do not build on a computer either (74 that SPIRV-Tools refuses, "Vector access is out of bounds"; a
   mesh program without a mesh layout; Ampere instruction 481), and the game plays without them. The phone's job writes a library only when every
   shader that builds on a computer built, and learns which ones do not from the profile's manifest, which Ocarina of Time did not have yet. Its
@@ -23,12 +23,12 @@ The credits for the code it is built on are in [NOTICE.md](NOTICE.md).
   - `.gitattributes` checks every text file out with LF, so the shader versions and the rewrite key are the same on every system.
   - `tool_lock.py` checks the translator the environment's `XLATE` names.
   - CI (`.github/workflows/prepare-pc.yml`) checks this on Windows and Linux.
-- Discussions are open, with a [device reports](https://github.com/nativeayn/nativeayn/discussions/1) thread.
+- Discussions are open, with a [device reports](https://github.com/renelima/NativeAYN/discussions/1) thread.
 
 ## NativeAYN 0.2.0
 
 - **Prepare on the phone.** The APK now carries the real on-phone packer (CPython 3.14 with the repository's tools, the shader translator
-  `libdmsh_xlate.so` and SPIRV-Tools), so Add game › Prepare makes a game's pack from the dump on the phone itself. Experimental: on the POCO F8 Pro
+  `libdmsh_xlate.so` and SPIRV-Tools), so Add game â€º Prepare makes a game's pack from the dump on the phone itself. Experimental: on the POCO F8 Pro
   with Ocarina of Time, the code rewrite took about 3 minutes and the shader scan of the game's 186,583 files about 30; the shader translation was
   still being tested when this was released.
 - The packer's build (`android/ondevice/build.sh`, `dm/gfx/tools/dmsh_xlate_android/build.sh`, `build_spirv_tools.sh`) runs with bash on Linux as well
@@ -67,7 +67,7 @@ The first release: Ocarina of Time (the Switch 2 remake, `0400486024DEC000`) bro
 - About: the app names its license, GPL-3.0-or-later as a whole, and points to NOTICE.md; logs and the Vulkan application name say "NativeAYN".
 - Release signing: `-PnxLive=true` reads the key from `ANKA_KEYSTORE`, `ANKA_KEY_ALIAS`, `ANKA_KEYSTORE_PASSWORD` and `ANKA_KEY_PASSWORD` (environment
   or `~/.gradle/gradle.properties`); `android/tools/release.sh` builds, signs, verifies and checksums a release ([docs/RELEASING.md](docs/RELEASING.md)).
-  `Signer.OFFICIAL` holds the release certificate's SHA-256 (`4d7443354f53…3bb0`), so only builds signed with that key call
+  `Signer.OFFICIAL` holds the release certificate's SHA-256 (`4d7443354f53â€¦3bb0`), so only builds signed with that key call
   themselves official.
 - APK names `anka-native-<suffix>.apk`; exported packs `anka-pack-<title ID>-<version>.zip`; the in-app updater looks at this project's releases.
 - Game settings > **RAM saver (uses storage)**, per game, off by default: the game's large write-once texture pools live in a file in the app's cache
