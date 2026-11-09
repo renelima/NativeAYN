@@ -23,7 +23,7 @@ import java.util.Arrays;
  * the letterboxed 16:9 picture, hands the layout to the host (nxhost_touch_controls_set) and passes every touch on (nxhost_input_touch); the host decides what each touch
  * drives, a control (its buttons and sticks go to the game as the handheld controller, dm_input_set) or the game's touchscreen, so a touch on a control never reaches the
  * touchscreen. The view reads back what each control holds to draw it and to give a haptic tick on each press.
- * The small button at the top centre shows or hides the controls; holding it opens the settings (opacity, size, vibration). They hide by themselves while a gamepad is
+ * The show / hide switch lives in the in-game panel (SidePanel, the On-screen controls section), not on the picture. They hide by themselves while a gamepad is
  * connected and come back when the last one goes.
  */
 final class TouchControls extends View {
@@ -46,7 +46,6 @@ final class TouchControls extends View {
     private final long[] buttons = new long[MAX];
     private final float[] cx = new float[MAX], cy = new float[MAX], r = new float[MAX];
     private final String[] label = new String[MAX];
-    private float tx, ty, tr;      // the show / hide button
     private float picX, picY, picW = 1, picH = 1;   // the game's picture in the view, normalized
 
     // The user's layout, one per screen shape (prof: the view's size in steps of 40 units, so a foldable's two screens keep one each): each group (the left stick with L3,
@@ -67,9 +66,6 @@ final class TouchControls extends View {
 
     private final long[] pressed = new long[MAX], prev = new long[MAX];
     private final float[] sticks = new float[4];
-    private int toggleId = -1;
-    private boolean toggleLong;
-    private final Runnable longPress = () -> { toggleLong = true; performHapticFeedback(HapticFeedbackConstants.LONG_PRESS); settings(); };
 
     private final Paint fill = new Paint(Paint.ANTI_ALIAS_FLAG), line = new Paint(Paint.ANTI_ALIAS_FLAG), text = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Path path = new Path();
@@ -111,9 +107,11 @@ final class TouchControls extends View {
         invalidate();
     }
 
-    private void toggle() {
-        if (gamepad) { gamepad = false; shown = true; }   // the user wants them back with a gamepad connected
-        else shown = !shown;
+    /** The On-screen controls section's switch in the in-game panel: show or hide the buttons (the same shown flag the old top-centre button carried) */
+    void setShown(boolean on) {
+        if (on && gamepad) gamepad = false;   // the user wants them back with a gamepad connected
+        if (shown == on) return;
+        shown = on;
         prefs().edit().putBoolean("shown", shown).commit();
         Native.note("on-screen controls " + (active() ? "shown" : "hidden") + " by the user");
         apply();
@@ -190,7 +188,6 @@ final class TouchControls extends View {
                     cx[j] += cx[j] < w / 2f ? move : -move;
                 }
         groups(w, h, u);
-        tr = 15 * u; tx = w / 2f; ty = m + tr * 0.8f;
         // The host's units: centres normalized to the view, radii in units of its height; a stick's grab ring is its own (input_map.c)
         float[] f = new float[n * 6];
         for (int i = 0; i < n; i++) {
@@ -280,7 +277,7 @@ final class TouchControls extends View {
     void startEditLayout() {
         if (editing || prof == null) return;
         if (onEditStart != null) onEditStart.run();
-        editing = true; shown = true; gamepad = false;
+        editing = true; setShown(true);   // the editor draws only while shown: switch it on (and back from a gamepad's hide) for the edit
         Native.note("on-screen controls: the layout editor is open (screen " + prof + ")");
         apply();
     }
@@ -389,10 +386,8 @@ final class TouchControls extends View {
         invalidate();
     }
 
-    // ---- Touches: the show / hide button is the launcher's; every other pointer goes to the host ----
+    // ---- Touches: every pointer goes to the host; show / hide lives in the in-game panel (controlRows) ----
     private void send(int action, int id, float x, float y) { if (input) Native.touch(action, id, x / getWidth(), y / getHeight()); }
-
-    private boolean onToggle(float x, float y) { float dx = x - tx, dy = y - ty, g = tr * 1.6f; return available && dx * dx + dy * dy <= g * g; }
 
     @Override public boolean onTouchEvent(MotionEvent e) {
         if (editing) return editTouch(e);
@@ -401,33 +396,19 @@ final class TouchControls extends View {
             case MotionEvent.ACTION_DOWN:
             case MotionEvent.ACTION_POINTER_DOWN: {
                 int i = e.getActionIndex(), id = e.getPointerId(i);
-                if (toggleId < 0 && onToggle(e.getX(i), e.getY(i))) {
-                    toggleId = id; toggleLong = false;
-                    postDelayed(longPress, 600);
-                    if (haptics) performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
-                    return true;
-                }
                 send(act, id, e.getX(i), e.getY(i));
                 break;
             }
             case MotionEvent.ACTION_MOVE:
-                for (int i = 0; i < e.getPointerCount(); i++) if (e.getPointerId(i) != toggleId) send(act, e.getPointerId(i), e.getX(i), e.getY(i));
+                for (int i = 0; i < e.getPointerCount(); i++) send(act, e.getPointerId(i), e.getX(i), e.getY(i));
                 break;
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_POINTER_UP: {
                 int i = e.getActionIndex(), id = e.getPointerId(i);
-                if (id == toggleId) {
-                    toggleId = -1;
-                    removeCallbacks(longPress);
-                    if (!toggleLong && onToggle(e.getX(i), e.getY(i))) toggle();
-                    return true;
-                }
                 send(act, id, e.getX(i), e.getY(i));
                 break;
             }
             case MotionEvent.ACTION_CANCEL:
-                toggleId = -1;
-                removeCallbacks(longPress);
                 send(act, 0, 0, 0);
                 break;
             default:
@@ -457,20 +438,10 @@ final class TouchControls extends View {
 
     @Override protected void onDraw(Canvas c) {
         if (!available) return;
+        if (!active() && !editing) return;   // hidden: nothing of the controls is drawn (the panel's switch shows them again)
         float dp = getResources().getDisplayMetrics().density;
         line.setStrokeWidth(Math.max(1.5f, 1.6f * dp));
         if (editing) { drawControls(c); drawEditor(c, dp); return; }
-        // The show / hide button: a small pad outline, faint while the controls are hidden
-        boolean on = active();
-        float ta = on ? 1f : 0.7f;
-        fill.setColor(Color.argb(Math.round(255 * 0.35f * ta), 0, 0, 0));
-        c.drawCircle(tx, ty, tr, fill);
-        line.setColor(Color.argb(Math.round(255 * 0.8f * ta), 255, 255, 255));
-        c.drawCircle(tx, ty, tr, line);
-        rect.set(tx - tr * 0.6f, ty - tr * 0.3f, tx + tr * 0.6f, ty + tr * 0.35f);
-        c.drawRoundRect(rect, tr * 0.3f, tr * 0.3f, line);
-        if (!on) c.drawLine(tx - tr * 0.65f, ty + tr * 0.65f, tx + tr * 0.65f, ty - tr * 0.65f, line);
-        if (!on) return;
         drawControls(c);
     }
 
@@ -567,12 +538,11 @@ final class TouchControls extends View {
     }
 
     // ---- Settings: opacity, size and the haptic tick, kept in the app's preferences ----
-    /** What a long press on the show / hide button opens: GameActivity's in-game panel (SidePanel), which holds these rows (controlRows) */
-    Runnable openSettings;
-    private void settings() { if (openSettings != null) openSettings.run(); }
-
-    /** The on-screen controls' rows of the in-game panel: opacity, size, the haptic tick, the log over the game, and Reset */
+    /** The on-screen controls' rows of the in-game panel: show or hide the buttons, opacity, size, the haptic tick, the log over the game, and Reset */
     void controlRows(Context ctx, LinearLayout box) {
+        CheckBox sb = new CheckBox(ctx);
+        sb.setText("Show the on-screen buttons"); sb.setChecked(shown);
+        sb.setOnCheckedChangeListener((b, v) -> setShown(v));
         TextView ol = new TextView(ctx), sl = new TextView(ctx);
         SeekBar os = new SeekBar(ctx), ss = new SeekBar(ctx);
         CheckBox hb = new CheckBox(ctx), lb = new CheckBox(ctx);
@@ -600,8 +570,8 @@ final class TouchControls extends View {
         lb.setOnCheckedChangeListener((b, v) -> prefs().edit().putBoolean("log", v).commit());
         android.widget.Button reset = new android.widget.Button(ctx);
         reset.setText("Reset the controls");
-        reset.setOnClickListener(v -> { os.setProgress(50); ss.setProgress(40); hb.setChecked(true); });   // 60 % opacity, 100 % size, the tick on
-        box.addView(ol); box.addView(os); box.addView(sl); box.addView(ss); box.addView(hb); box.addView(lb); box.addView(reset);
+        reset.setOnClickListener(v -> { sb.setChecked(true); os.setProgress(50); ss.setProgress(40); hb.setChecked(true); });   // the buttons on, 60 % opacity, 100 % size, the tick on
+        box.addView(sb); box.addView(ol); box.addView(os); box.addView(sl); box.addView(ss); box.addView(hb); box.addView(lb); box.addView(reset);
         layoutRows(ctx, box);   // the picture position and the layout editor
     }
 

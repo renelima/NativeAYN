@@ -109,7 +109,6 @@ public final class GameActivity extends Activity implements SurfaceHolder.Callba
         stats = new Overlay(this);
         panel = new SidePanel(this, box -> controls.controlRows(this, box));
         root.addView(panel, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
-        controls.openSettings = panel::open;
         // The layout editor needs the whole screen: the panel closes, and Paused (over the controls: its first tap would continue the game) hides while it is open;
         // the game stays paused
         controls.onEditStart = () -> { panel.close(); pausedView.setVisibility(View.GONE); };
