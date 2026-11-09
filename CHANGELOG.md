@@ -6,6 +6,20 @@ Histórico das releases do **NativeAYN**, o recompilador de Switch 2 para Androi
 O app é construído sobre o projeto base ([créditos em NOTICE.md](NOTICE.md)); o histórico dele antes do NativeAYN não faz parte deste arquivo — o versionamento
 do NativeAYN começa no 0.1.0. Builds de lançamento: [docs/RELEASING.md](docs/RELEASING.md).
 
+## NativeAYN 0.1.5 (2026-11-09)
+
+### Desempenho (Ocarina of Time; portado do Swap2-Native, créditos em NOTICE.md)
+
+- **A rede de upscale do jogo (agl NDSR) roda FSR 1 EASU no lugar da rede**: mesma janela de dispatch, mesmos descritores e contagem de grupos, com o módulo próprio em
+  `dm/gfx/vk_android/vka_ndsr.c` (`DM_VK_NDSR=fsr`, `DM_VK_NDSR_INPUT=sqrt`); o profile do jogo arma isso por padrão em vez do antigo substituto bilinear. No celular do fork
+  (POCO F7 Ultra, Link's house): 30,2-30,9 fps / GPU 32 ms com a rede contra 37,8-38,4 fps / 25,5 ms com EASU, imagem igual no tamanho do celular. O caminho antigo continua
+  respondendo por `DM_VK_NDSR_STANDIN=1`. ([docs/reference/shaders.md](docs/reference/shaders.md#agls-ndsr-upscaler-network-replaced-by-fsr-1-easu-on-the-vulkan-replay))
+- **Genlock**: o período de apresentação do jogo é encaixado nos múltiplos inteiros do refresh medido da tela (60,22-60,24 Hz nos celulares), no ritmo do jogo e na corrente de
+  horários do replay; sem isso a 30 fps a tela passava um quadro a mais ou a menos a cada ~4 s. `DM_VK_GENLOCK=0` volta ao período nominal.
+- **`dm/tools/gsys_dynres.py` (ferramenta)**: regrava a paleta de resolução dinâmica do próprio jogo (os dez níveis do `ModelSceneExtensionParam`) para uma cena menor
+  (por exemplo 1275x717 em vez de 1536x864); o host já lê o resultado por `DM_ROMFS_OVERLAY`. Medida no fork: 28,6 → 35,6-38,5 fps somada ao EASU. A escolha por jogo no
+  launcher (cena 720p feita no próprio celular) é trabalho seguinte.
+
 ## NativeAYN 0.1.4 (2026-11-09)
 
 ### Ajuste
