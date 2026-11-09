@@ -15,7 +15,7 @@
 
 ---
 
-O **NativeAYN** é um emulador nativo para Android: em vez de interpretar o código do jogo instrução por instrução, ele executa o **código ARM64 original do seu próprio jogo** de Switch 2 direto no processador do aparelho, com os gráficos reconstruídos em Vulkan — o jogo roda como ele mesmo, e o NativeAYN responde às chamadas de sistema que ele espera encontrar.
+O **NativeAYN** é um recompilador nativo para Android: em vez de interpretar o código do jogo instrução por instrução, ele executa o **código ARM64 original do seu próprio jogo** de Switch 2 direto no processador do aparelho — o que o Android não entende é reescrito uma única vez, e os gráficos são reconstruídos em Vulkan. O jogo roda como ele mesmo, e o NativeAYN responde às chamadas de sistema que ele espera encontrar.
 
 Projetado desde o primeiro dia para **portáteis Android** (AYN Odin e semelhantes): tela sempre ativa durante o jogo, controles físicos configuráveis por interface e escolha de driver GPU por jogo.
 

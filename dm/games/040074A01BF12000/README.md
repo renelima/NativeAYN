@@ -77,11 +77,11 @@ Cada passo abaixo parava o boot antes da sua correção:
 
 ## Boot (Android)
 
-No emulador arm64 do Android (API 36.1, SwiftShader Vulkan sem maps colocados, então o GPU não vê nenhum memory pool; desenhos e dispatches são pulados neste build), com o pack de `scripts/pack_android.py` ([android/TESTING.md, Emulator](../../../android/TESTING.md#emulator)):
+No dispositivo virtual arm64 do Android (AVD, API 36.1, SwiftShader Vulkan sem maps colocados, então o GPU não vê nenhum memory pool; desenhos e dispatches são pulados neste build), com o pack de `scripts/pack_android.py` ([android/TESTING.md, Emulator](../../../android/TESTING.md#emulator)):
 
 1. O carregador parava todo boot em `key page entry 0 is 0` ([Entrada 0 da key page no Android](../../../docs/reference/rewriter.md#key-page-entry-0-on-android)).
 2. Depois daquela correção (atual): o bloco convidado de 9,75 GiB em `0x4000000000`, `nnMain`, NVN2 device API 231.30, a primeira apresentação 6,7 s depois do início (cerca de 2 s com o RomFS no page cache), então o loop de quadros a 30-60 fps com 67 desenhos por quadro no menu do título. O renderizador de áudio roda num stream AAudio. Com `DM_KEYS` de toques de A desde 25 s o jogo sai do título, carrega o primeiro nível (uns 3.700 arquivos em 20 s) e roda sua abertura (`Dm_DemoOpeningDKAppear`) a cerca de 740 desenhos por quadro, 3,5 GB residentes. Sem crash, `FATAL` nem linha `[RED]` de host além dos stubs de gráficos ([android/PORTING.md](../../../android/PORTING.md#stubs-in-this-build)).
-3. Inalcançável no emulador: memória Vulkan colocada, `mprotect` e faltas de proteção de escrita nela (`nvn_dirty.c`), e qualquer coisa que um desenho ou dispatch escreva para a CPU ler.
+3. Inalcançável no AVD: memória Vulkan colocada, `mprotect` e faltas de proteção de escrita nela (`nvn_dirty.c`), e qualquer coisa que um desenho ou dispatch escreva para a CPU ler.
 
 No celular (Honor PNM-N49, Adreno 840, 16 GB):
 
