@@ -73,6 +73,7 @@ public final class GameActivity extends Activity implements SurfaceHolder.Callba
 
     @Override protected void onCreate(Bundle saved) {
         super.onCreate(saved);
+        Crash.install(this, String.valueOf(getIntent().getStringExtra("title_id")));   // a crash in a game's run lands in that game's Share log (Crash.java)
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);   // the screen stays lit while a game runs: the system idle timer must not sleep or lock it
         // This game's own host (libnxhost_<title ID>.so, with its profile compiled in): a game this APK has no profile for gets a sentence, not a crash
         String id = String.valueOf(getIntent().getStringExtra("title_id"));

@@ -59,6 +59,7 @@ public final class MainActivity extends Activity {
 
     @Override protected void onCreate(Bundle saved) {
         super.onCreate(saved);
+        Crash.install(this, "app");   // an uncaught exception leaves its trace in the logs folder, where Share log finds it (Crash.java)
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);   // the screen stays lit while the launcher is open (it is dropped when the app leaves the foreground)
         if (saved != null) settingsPage = saved.getBoolean("settings");
         frame = new FrameLayout(this);

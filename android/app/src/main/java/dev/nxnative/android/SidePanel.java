@@ -6,6 +6,7 @@ import android.graphics.drawable.GradientDrawable;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.View;
+import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
@@ -59,7 +60,7 @@ final class SidePanel extends FrameLayout {
         if (open) return;
         open = true;
         box.removeAllViews();
-        build();
+        safeBuild();
         setVisibility(VISIBLE);
         sheet.setTranslationX(sheet.getLayoutParams().width);
         sheet.animate().translationX(0).setDuration(180).start();
@@ -128,10 +129,19 @@ final class SidePanel extends FrameLayout {
         // The language, a quiet line under the rule: the two names, the current one raised. PT and EN are the same words in both languages.
         LinearLayout langRow = new LinearLayout(act);
         langRow.setOrientation(LinearLayout.HORIZONTAL);
-        langRow.setGravity(Gravity.END);
+        langRow.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
         langRow.addView(Ui.small(act, "Idioma / Language:"));
-        langRow.addView(Ui.button(act, "PT", Lang.pt(act) ? Ui.Kind.TONAL : Ui.Kind.QUIET, 34, v -> setLang("pt")));
-        langRow.addView(Ui.button(act, "EN", !Lang.pt(act) ? Ui.Kind.TONAL : Ui.Kind.QUIET, 34, v -> setLang("en")));
+        for (String code : new String[]{"pt", "en"}) {
+            Button b = Ui.button(act, code.toUpperCase(), code.equals(Prefs.lang(act)) ? Ui.Kind.TONAL : Ui.Kind.QUIET, 26, v -> setLang(code));
+            b.setMinWidth(0); b.setMinimumWidth(0);
+            b.setTextSize(12);
+            int hpad = Ui.dp(act, 8);
+            b.setPadding(hpad, 0, hpad, 0);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            lp.leftMargin = Ui.dp(act, 6);
+            lp.topMargin = Ui.dp(act, 2);      // a hair of air from the rule above
+            langRow.addView(b, lp);
+        }
         box.addView(langRow);
 
         String[] f = Native.fpsCapStatus().split(" ");   // the cap in effect, the rates this build has, and what the game runs at now
@@ -151,7 +161,20 @@ final class SidePanel extends FrameLayout {
     private void setLang(String lang) {
         Prefs.lang(act, lang);
         box.removeAllViews();   // the menu rebuilds itself in the new language right away; the other screens follow on being opened again
-        build();
+        safeBuild();
+    }
+
+    /** The rows, defended: if building them ever throws, the game does not die with the menu, and the failure says where it happened (the log gets it too, for Share log) */
+    private void safeBuild() {
+        try {
+            build();
+        } catch (RuntimeException e) {
+            StringBuilder s = new StringBuilder("The menu failed: " + e);
+            StackTraceElement[] st = e.getStackTrace();
+            for (int i = 0; i < Math.min(8, st.length); i++) s.append("\n  at ").append(st[i]);
+            box.addView(Ui.small(act, s));
+            if (act instanceof GameActivity) Native.note("[RED] side panel: " + s);
+        }
     }
 
     /** What the cap line says: the live status of the running game */

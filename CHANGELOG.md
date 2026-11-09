@@ -6,6 +6,17 @@ Histórico das releases do **NativeAYN**, o recompilador de Switch 2 para Androi
 O app é construído sobre o projeto base ([créditos em NOTICE.md](NOTICE.md)); o histórico dele antes do NativeAYN não faz parte deste arquivo — o versionamento
 do NativeAYN começa no 0.1.0. Builds de lançamento: [docs/RELEASING.md](docs/RELEASING.md).
 
+## NativeAYN 0.1.3 (2026-11-09)
+
+### Ajuste
+
+- Os botões **PT / EN** do menu do jogo ficaram menores (26 dp, texto 12) e ganharam um respiro do rótulo "Idioma / Language:" e da régua acima.
+
+### Diagnóstico
+
+- **O app agora grava o stack trace de qualquer crash** na pasta de logs (`<jogo>-<data>-crash.log`), que vai junto com o Compartilhar log.
+- Se a montagem do menu do jogo falhar, o jogo não morre junto: o menu mostra a falha em si (e o log registra). Mandem o log pelo Ajustes › Compartilhar log.
+
 ## NativeAYN 0.1.2 (2026-11-09)
 
 ### Novo
