@@ -59,7 +59,7 @@ final class Ondevice {
 
     /** What to do instead when this APK cannot prepare a game (available() is false) */
     static final String UNAVAILABLE = "This version of Anka Native cannot prepare a game on the phone. Prepare it once on a computer (Linux or Mac), as the README's "
-            + "\"Install\" steps say (github.com/EddizEge/AnkaNative), copy the pack next to the dump as <title ID>-work/android-pack, then add the game again or pick "
+            + "\"Install\" steps say (github.com/renelima/NativeAYN), copy the pack next to the dump as <title ID>-work/android-pack, then add the game again or pick "
             + "that pack folder.";
 
     /** Prepare the dump (MainActivity's Add game, a game card's Prepare again): checked off the main thread, then asked before anything is written */

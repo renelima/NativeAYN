@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2026 EddizEge
+# SPDX-FileCopyrightText: Copyright 2026 renelima
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """The NativeAYN mark: the "N over an infinity" brand, warm orange-red on the left and teal-blue on the right, on black.
