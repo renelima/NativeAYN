@@ -55,7 +55,7 @@ __attribute__((visibility("default"))) int nxhost_vk_readiness(char *buf, int n)
     uint32_t api = VK_API_VERSION_1_0; if (vkEnumerateInstanceVersion) vkEnumerateInstanceVersion(&api);
     put_ver(&o, "vk.instance", api);
     if (!vkCreateInstance) { put(&o, "error=no vkCreateInstance\n"); return 1; }
-    VkApplicationInfo ai = {VK_STRUCTURE_TYPE_APPLICATION_INFO, .pApplicationName = "Anka Native readiness", .pEngineName = "Anka Native",
+    VkApplicationInfo ai = {VK_STRUCTURE_TYPE_APPLICATION_INFO, .pApplicationName = "NativeAYN readiness", .pEngineName = "NativeAYN",
                             .apiVersion = api >= VK_API_VERSION_1_3 ? VK_API_VERSION_1_3 : api >= VK_API_VERSION_1_1 ? VK_API_VERSION_1_1 : VK_API_VERSION_1_0};
     VkInstanceCreateInfo ici = {VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO, .pApplicationInfo = &ai};
     VkInstance inst; VkResult r = vkCreateInstance(&ici, NULL, &inst);

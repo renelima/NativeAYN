@@ -210,7 +210,7 @@ public final class MainActivity extends Activity {
     }
 
     /**
-     * The About screen's license line. Anka Native is GPL-3.0-or-later as a whole: this APK's GPL-3.0-or-later parts are LSFG frame generation
+     * The About screen's license line. NativeAYN is GPL-3.0-or-later as a whole: this APK's GPL-3.0-or-later parts are LSFG frame generation
      * (dm/gfx/vk_android/lsfg, unless built with -PnxLsfg=false) and, with the on-phone packer, the shader translator (libdmsh_xlate.so, InstEmitAmpereMesh.cs)
      */
     static String aboutLicense() {
@@ -932,7 +932,7 @@ public final class MainActivity extends Activity {
             else error(e.getMessage());
             return;
         }
-        if (p.simulated) {   // a placeholder of the simulated engine (Anka Native 0.1.0's Prepare made one): it has no game code and no shaders, so it never starts
+        if (p.simulated) {   // a placeholder of the simulated engine (NativeAYN 0.1.0's Prepare made one): it has no game code and no shaders, so it never starts
             if (dump) packProblem(g, "This pack is a placeholder, not a pack to play.", pickPack);
             else new AlertDialog.Builder(this).setTitle("No pack for " + g.name).setMessage(Ondevice.UNAVAILABLE + "\n\nPack: " + g.packDir)
                     .setNegativeButton("Cancel", null).setPositiveButton("Pick pack folder", (d, w) -> pickPack.run()).show();

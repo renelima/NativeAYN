@@ -53,12 +53,12 @@ final class Ondevice {
     /**
      * Whether this APK can prepare a game on the phone: it carries the real packer (-PnxPackEngine=native), or it is a test build, whose simulated engine (FakeEngine)
      * is there for UI work. A play or release build without the packer offers no Prepare: the simulated engine's placeholder pack never starts, so its Prepare only
-     * looked done (Anka Native 0.1.0 shipped that way)
+     * looked done (NativeAYN 0.1.0 shipped that way)
      */
     static boolean available() { return "native".equals(BuildConfig.NX_PACK_ENGINE) || !BuildConfig.NX_PLAY; }
 
     /** What to do instead when this APK cannot prepare a game (available() is false) */
-    static final String UNAVAILABLE = "This version of Anka Native cannot prepare a game on the phone. Prepare it once on a computer (Linux or Mac), as the README's "
+    static final String UNAVAILABLE = "This version of NativeAYN cannot prepare a game on the phone. Prepare it once on a computer (Linux or Mac), as the README's "
             + "\"Install\" steps say (github.com/renelima/NativeAYN), copy the pack next to the dump as <title ID>-work/android-pack, then add the game again or pick "
             + "that pack folder.";
 

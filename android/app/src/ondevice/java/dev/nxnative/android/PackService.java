@@ -628,7 +628,7 @@ public final class PackService extends Service {
         String state = j.state();
         int pct = (int) Math.round(j.overall() * 100);
         int i = j.current();
-        if (state.equals("done")) return b.setContentTitle(name + " is ready to play" + sim).setContentText("Open Anka Native and tap Play.").setAutoCancel(true).build();
+        if (state.equals("done")) return b.setContentTitle(name + " is ready to play" + sim).setContentText("Open NativeAYN and tap Play.").setAutoCancel(true).build();
         boolean running = state.equals("running") && worker != null;
         boolean waiting = state.equals("paused") && worker != null;   // the policy's pause: it goes on by itself
         b.setContentTitle((running ? "Preparing " : waiting ? "Waiting: " : state.equals("failed") ? "Could not prepare " : "Paused: ") + name + sim);

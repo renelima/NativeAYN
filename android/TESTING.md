@@ -14,7 +14,7 @@ W=$D/040074A01BF12000-work
 ```sh
 $D/.venv-nxnative/bin/python scripts/pack_android.py $D/DonkeyKongBananza   # → $W/android-pack (about 60 MB); not needed when the phone prepares it (below)
 android/ondevice/build.sh $W/packer                                             # once: the app's packer (stage)
-cd android/app && ./gradlew -PnxPackStage=$W/packer/stage apk && cd ../..      # → android/app/out/anka-native-test.apk
+cd android/app && ./gradlew -PnxPackStage=$W/packer/stage apk && cd ../..      # → android/app/out/nativeayn-test.apk
 ```
 
 Sem um pack do Mac, o app prepara um a partir do dump no celular: copie só o dump (passo 3 sem `android-pack`), então no passo 5 **Adicionar jogo** não acha pack e oferece **Preparar** (cerca de 30-45 minutos em segundo plano, ONDEVICE.md). Mate-o (`adb shell am force-stop dev.ankanative.android.test`) ou reinicie o celular no meio: **Retomar** na tela principal continua do shader em que tinha chegado.
@@ -22,7 +22,7 @@ Sem um pack do Mac, o app prepara um a partir do dump no celular: copie só o du
 ## 2. Instalar o APK
 
 ```sh
-adb install -r android/app/out/anka-native-test.apk
+adb install -r android/app/out/nativeayn-test.apk
 ```
 
 Ou copie o APK para o celular e abra-o pelo Arquivos (permita instalações daquele app quando for pedido).
@@ -281,7 +281,7 @@ Antes do skip, a mesma execução levava uns 10 minutos do lançamento à flores
 
 ## Controle ao vivo
 
-Enquanto o jogo roda, um agente pode mudar os switches do replay, tirar screenshots e ler estatísticas de frame sem reiniciá-lo: o launcher define `DM_CTL=<app files>/ctl.txt` (`/sdcard/Android/data/dev.ankanative.android.test/files/ctl.txt`), o host lê cada linha acrescentada a ele em até 100 ms (`dm/host/hle_hid.c`, o `DM_CTL` do Mac; no Android ele começa no fim do arquivo, então linhas de uma execução antiga não são reproduzidas), e o `android/tools/nxctl.sh` acrescenta uma linha com adb e imprime as linhas de log que respondem a ela (`[vk] ctl: …`):
+Enquanto o jogo roda, um script de teste pode mudar os switches do replay, tirar screenshots e ler estatísticas de frame sem reiniciá-lo: o launcher define `DM_CTL=<app files>/ctl.txt` (`/sdcard/Android/data/dev.ankanative.android.test/files/ctl.txt`), o host lê cada linha acrescentada a ele em até 100 ms (`dm/host/hle_hid.c`, o `DM_CTL` do Mac; no Android ele começa no fim do arquivo, então linhas de uma execução antiga não são reproduzidas), e o `android/tools/nxctl.sh` acrescenta uma linha com adb e imprime as linhas de log que respondem a ela (`[vk] ctl: …`):
 
 ```sh
 android/tools/nxctl.sh env DM_VK_DRAW=0          # draws off from the next frame; env DM_VK_DRAW= clears it again

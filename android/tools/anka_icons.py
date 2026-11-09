@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-FileCopyrightText: Copyright 2026 renelima
 # SPDX-License-Identifier: MIT
-"""Writes Anka Native's icon resources from the Anka mark (anka_logo.py): the adaptive launcher icon's foreground and monochrome layers (drawable-<density>/
+"""Writes NativeAYN's icon resources from its mark (anka_logo.py): the adaptive launcher icon's foreground and monochrome layers (drawable-<density>/
 anka_fg.png, anka_mono.png), the legacy mipmaps (mipmap-<density>/ic_launcher.png, ic_launcher_round.png), the in-app mark (drawable-nodpi/anka_mark.png: the
 header badge and the main screen's drifting background), the notification icon (drawable-nodpi/anka_notify.png, white) and android/images/logo.png.
 Needs only Pillow. Usage: python3 android/tools/anka_icons.py (from anywhere; it writes into this checkout)."""

@@ -41,7 +41,7 @@ O ES-DE lê emuladores customizados de `ES-DE/custom_systems/es_find_rules.xml` 
 ```xml
 <?xml version="1.0"?>
 <ruleList>
-    <emulator name="ANKA-NATIVE">
+    <emulator name="NATIVEAYN">
         <rule type="androidpackage">
             <entry>dev.ankanative.android/dev.ankanative.android.Launch</entry>
         </rule>
@@ -59,8 +59,8 @@ Depois adicione um sistema que lista arquivos `.nup` e o usa. Mude o `path` para
         <fullname>NativeAYN</fullname>
         <path>%ROMPATH%/ankanative</path>
         <extension>.nup .NUP</extension>
-        <command label="NativeAYN">%EMULATOR_ANKA-NATIVE% %ACTION%=android.intent.action.VIEW %DATA%=%ROMSAF%</command>
-        <command label="NativeAYN (path)">%EMULATOR_ANKA-NATIVE% %EXTRA_game%=%ROM%</command>
+        <command label="NativeAYN">%EMULATOR_NATIVEAYN% %ACTION%=android.intent.action.VIEW %DATA%=%ROMSAF%</command>
+        <command label="NativeAYN (path)">%EMULATOR_NATIVEAYN% %EXTRA_game%=%ROM%</command>
         <platform>switch</platform>
         <theme>switch</theme>
     </system>

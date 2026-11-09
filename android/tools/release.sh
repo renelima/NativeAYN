@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: MIT
-# Builds, signs and checks an Anka Native release (docs/RELEASING.md). The release key never lives in this repository: Gradle reads its keystore path,
+# Builds, signs and checks an NativeAYN release (docs/RELEASING.md). The release key never lives in this repository: Gradle reads its keystore path,
 # alias and passwords from the environment or from ~/.gradle/gradle.properties (ANKA_KEYSTORE, ANKA_KEY_ALIAS, ANKA_KEYSTORE_PASSWORD, ANKA_KEY_PASSWORD;
 # android/app/build.gradle). This script never creates a key and never asks for, stores or prints a password.
 #
 #   android/tools/release.sh --fingerprint   prints the release certificate's SHA-256 (for Signer.OFFICIAL), from the keystore; keytool asks for the
 #                                            store password unless ANKA_KEYSTORE_PASSWORD is set
-#   android/tools/release.sh                 builds the release APK (-PnxLive=true: dev.ankanative.android, "Anka Native"), signed with the release key,
+#   android/tools/release.sh                 builds the release APK (-PnxLive=true: dev.ankanative.android, "NativeAYN"), signed with the release key,
 #                                            verifies it with apksigner, prints the certificate's SHA-256, and writes the APK and SHA256SUMS.txt
 #                                            to the release folder outside the repository
 #
@@ -14,7 +14,7 @@
 #   ANKA_GAMES          the games the APK runs (-PnxGames), default 0400486024DEC000 (Ocarina of Time)
 #   ANKA_VERSION        the version name (-PnxVersion), default 0.1.0; ANKA_VERSION_CODE the version code (-PnxVersionCode), default 1
 #   ANKA_PACK_ENGINE    native (default: the on-phone packer, from the stage NX_PACK_STAGE names) or fake (no packer: the app offers no Prepare)
-#   ANKA_RELEASE_DIR    where the APK and SHA256SUMS.txt go, default ~/anka-native-releases/<version>; must be outside this repository
+#   ANKA_RELEASE_DIR    where the APK and SHA256SUMS.txt go, default ~/nativeayn-releases/<version>; must be outside this repository
 #   JAVA_HOME           a JDK 17-21 for Gradle (default /usr/lib/jvm/java-21-openjdk when it exists)
 #   ANDROID_HOME        the Android SDK (default: sdk.dir of android/app/local.properties) for apksigner
 #   ANKA_ALLOW_DIRTY=1  build from a tree with uncommitted changes (a release's source is the commit in its build tag, so the default refuses)
@@ -59,7 +59,7 @@ ENGINE=${ANKA_PACK_ENGINE:-native}
 if [ "$ENGINE" = native ]; then
     [ -n "${NX_PACK_STAGE:-}" ] && [ -f "$NX_PACK_STAGE/lib/libnxpack.so" ] || die "set NX_PACK_STAGE to the on-phone packer's stage (android/ondevice/build.sh <work dir> makes <work dir>/stage), or ANKA_PACK_ENGINE=fake"
 fi
-OUT=${ANKA_RELEASE_DIR:-$HOME/anka-native-releases/$VERSION}
+OUT=${ANKA_RELEASE_DIR:-$HOME/nativeayn-releases/$VERSION}
 inside_repo "$OUT" && die "the release folder must be outside this repository: $OUT"
 [ -n "$(setting ANKA_KEYSTORE_PASSWORD)" ] || die "set ANKA_KEYSTORE_PASSWORD (environment or ~/.gradle/gradle.properties) for Gradle's signing"
 
@@ -82,10 +82,10 @@ if [ -z "$OFFICIAL" ] && [ "${ANKA_ALLOW_UNOFFICIAL:-}" != 1 ]; then
     die "Signer.OFFICIAL is not set: run 'android/tools/release.sh --fingerprint' and fill it in first (docs/RELEASING.md); ANKA_ALLOW_UNOFFICIAL=1 overrides"
 fi
 
-echo "Building Anka Native $VERSION ($CODE) for $GAMES, pack engine $ENGINE, at $(git -C "$REPO" rev-parse --short=12 HEAD)"
+echo "Building NativeAYN $VERSION ($CODE) for $GAMES, pack engine $ENGINE, at $(git -C "$REPO" rev-parse --short=12 HEAD)"
 (cd "$REPO/android/app" && ./gradlew --no-daemon -q -PnxLive=true -PnxGames="$GAMES" -PnxPackEngine="$ENGINE" \
     -PnxVersion="$VERSION" -PnxVersionCode="$CODE" apk)
-APK="$REPO/android/app/out/anka-native-$VERSION.apk"
+APK="$REPO/android/app/out/nativeayn-$VERSION.apk"
 [ -f "$APK" ] || die "the build made no $APK"
 
 # Verify the signature (v1 to v3 as apksigner checks them) and read the certificate
@@ -101,6 +101,6 @@ fi
 
 mkdir -p "$OUT"
 cp "$APK" "$OUT/"
-(cd "$OUT" && sha256sum "anka-native-$VERSION.apk" > SHA256SUMS.txt)
+(cd "$OUT" && sha256sum "nativeayn-$VERSION.apk" > SHA256SUMS.txt)
 echo "Release folder: $OUT"
 cat "$OUT/SHA256SUMS.txt"

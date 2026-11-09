@@ -7,13 +7,13 @@ Por padrão ele executa Ocarina of Time (`0400486024DEC000`) e não tem packer n
 
 ## 1. Criar a chave de release (uma vez)
 
-Escolha uma pasta fora deste repositório, por exemplo `~/keys/anka-native`, e execute (ela pede a senha do keystore duas vezes; em um keystore PKCS12, o padrão, a senha da chave é a mesma do store):
+Escolha uma pasta fora deste repositório, por exemplo `~/keys/nativeayn`, e execute (ela pede a senha do keystore duas vezes; em um keystore PKCS12, o padrão, a senha da chave é a mesma do store):
 
 ```sh
-mkdir -p ~/keys/anka-native && chmod 700 ~/keys/anka-native
+mkdir -p ~/keys/nativeayn && chmod 700 ~/keys/nativeayn
 keytool -genkeypair -v \
-  -keystore ~/keys/anka-native/anka-native-release.jks -storetype PKCS12 \
-  -alias anka-native -keyalg RSA -keysize 4096 -validity 10950 \
+  -keystore ~/keys/nativeayn/nativeayn-release.jks -storetype PKCS12 \
+  -alias nativeayn -keyalg RSA -keysize 4096 -validity 10950 \
   -dname "CN=NativeAYN, O=NativeAYN"
 ```
 
@@ -29,16 +29,16 @@ O build de release do Gradle lê quatro configurações do ambiente, ou então d
 
 | Configuração | Valor |
 |---|---|
-| `ANKA_KEYSTORE` | o caminho do keystore, e.g. `$HOME/keys/anka-native/anka-native-release.jks` |
-| `ANKA_KEY_ALIAS` | `anka-native` |
+| `ANKA_KEYSTORE` | o caminho do keystore, e.g. `$HOME/keys/nativeayn/nativeayn-release.jks` |
+| `ANKA_KEY_ALIAS` | `nativeayn` |
 | `ANKA_KEYSTORE_PASSWORD` | a senha do keystore |
 | `ANKA_KEY_PASSWORD` | a senha da chave (a do store quando não definida; a mesma no PKCS12) |
 
 Para uma sessão do shell, digitando a senha sem que ela entre no histórico do shell:
 
 ```sh
-export ANKA_KEYSTORE="$HOME/keys/anka-native/anka-native-release.jks"
-export ANKA_KEY_ALIAS=anka-native
+export ANKA_KEYSTORE="$HOME/keys/nativeayn/nativeayn-release.jks"
+export ANKA_KEY_ALIAS=nativeayn
 read -rs -p 'Keystore password: ' ANKA_KEYSTORE_PASSWORD; echo
 export ANKA_KEYSTORE_PASSWORD ANKA_KEY_PASSWORD="$ANKA_KEYSTORE_PASSWORD"
 ```
@@ -46,8 +46,8 @@ export ANKA_KEYSTORE_PASSWORD ANKA_KEY_PASSWORD="$ANKA_KEYSTORE_PASSWORD"
 Ou guarde o caminho e o alias (e, se você aceitar senha em arquivo, as senhas) em `~/.gradle/gradle.properties`, legível só por você (`chmod 600 ~/.gradle/gradle.properties`):
 
 ```properties
-ANKA_KEYSTORE=/home/<you>/keys/anka-native/anka-native-release.jks
-ANKA_KEY_ALIAS=anka-native
+ANKA_KEYSTORE=/home/<you>/keys/nativeayn/nativeayn-release.jks
+ANKA_KEY_ALIAS=nativeayn
 ```
 
 ## 3. Preencher o certificado (uma vez, depois que a chave existir)
@@ -75,7 +75,7 @@ A partir de um checkout limpo do commit que você lança (`release.sh` recusa mu
 android/tools/release.sh
 ```
 
-Ele compila com um JDK 21 (`JAVA_HOME`, por padrão `/usr/lib/jvm/java-21-openjdk`; o Gradle falha com JDK 27), deixa o Gradle assinar o APK com a chave de release, verifica com `apksigner verify --print-certs` (um signatário), imprime o SHA-256 do certificado e para quando não é o `Signer.OFFICIAL`. O APK (`anka-native-<version>.apk`) e o `SHA256SUMS.txt` vão para `~/anka-native-releases/<version>/`, fora do repositório.
+Ele compila com um JDK 21 (`JAVA_HOME`, por padrão `/usr/lib/jvm/java-21-openjdk`; o Gradle falha com JDK 27), deixa o Gradle assinar o APK com a chave de release, verifica com `apksigner verify --print-certs` (um signatário), imprime o SHA-256 do certificado e para quando não é o `Signer.OFFICIAL`. O APK (`nativeayn-<version>.apk`) e o `SHA256SUMS.txt` vão para `~/nativeayn-releases/<version>/`, fora do repositório.
 
 Opções (ambiente): `ANKA_VERSION` (padrão `0.1.0`) e `ANKA_VERSION_CODE` (padrão `1`; aumente-a em toda release, o Android só atualiza para um code maior), `ANKA_GAMES` (padrão `0400486024DEC000`; várias são separadas por vírgula), `ANKA_PACK_ENGINE` (`native` por padrão, que precisa do stage do packer no telefone em `NX_PACK_STAGE`, veja [android/README.md](../android/README.md); `fake` compila sem o packer, e o app então não oferece Prepare), `ANKA_RELEASE_DIR` (outra pasta fora do repositório).
 

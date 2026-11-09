@@ -1,4 +1,4 @@
-// The Anka Native launcher: one APK with the host (libnxhost.so, built from android/host) and the launcher's JNI shim (libnxlaunch.so). No game code and no game data:
+// The NativeAYN launcher: one APK with the host (libnxhost.so, built from android/host) and the launcher's JNI shim (libnxlaunch.so). No game code and no game data:
 // the user's pack and game folder stay on the phone's storage (android/README.md, android/TESTING.md)
 plugins {
     id 'com.android.application' version '8.13.2'
@@ -12,15 +12,15 @@ def nxGames = (providers.gradleProperty('nxGames').getOrElse('') ?: nxGame).spli
 nxGames.each { g ->
     if (!(g ==~ /[0-9A-F]{16}/)) throw new GradleException("nxGames: each game must be a title ID (16 upper-case hex digits), not $g")
 }
-// -PnxPlay=true builds a second app (dev.ankanative.android.play, "Anka Native") that installs beside the test app, so test installs leave it alone
+// -PnxPlay=true builds a second app (dev.ankanative.android.play, "NativeAYN") that installs beside the test app, so test installs leave it alone
 def nxPlay = providers.gradleProperty('nxPlay').getOrElse('false') == 'true'
-// -PnxApp=<suffix> builds another test app, dev.ankanative.android.<suffix> ("Anka Native", or -PnxLabel), beside the test app: one game's bring-up (-PnxApp=mkw) installs
-// without replacing the test app other agents run. It is a test app (saves-test/), with its own files folder (Android/data/dev.ankanative.android.<suffix>/files: env.txt, logs)
+// -PnxApp=<suffix> builds another test app, dev.ankanative.android.<suffix> ("NativeAYN", or -PnxLabel), beside the test app: one game's bring-up (-PnxApp=mkw) installs
+// without replacing the test app others run. It is a test app (saves-test/), with its own files folder (Android/data/dev.ankanative.android.<suffix>/files: env.txt, logs)
 def nxApp = providers.gradleProperty('nxApp').getOrElse('')
 if (nxApp && !(nxApp ==~ /[a-z][a-z0-9]*/)) throw new GradleException("nxApp must be lower-case letters and digits, not $nxApp")
 if (nxApp in ['test', 'play']) throw new GradleException("nxApp $nxApp is taken by another app id: pick another suffix")
 if (nxApp && nxPlay) throw new GradleException('nxApp and nxPlay build different apps: give one of them')
-// -PnxLive=true builds the public release (dev.ankanative.android, "Anka Native"): the play app's behaviour (saves/<id>, no test switches), not debuggable, signed
+// -PnxLive=true builds the public release (dev.ankanative.android, "NativeAYN"): the play app's behaviour (saves/<id>, no test switches), not debuggable, signed
 // with the owner's release key (docs/RELEASING.md, android/tools/release.sh). -PnxVersion sets its version
 def nxLive = providers.gradleProperty('nxLive').getOrElse('false') == 'true'
 if (nxLive && (nxPlay || nxApp)) throw new GradleException('nxLive builds the release app: give neither nxPlay nor nxApp')
@@ -176,12 +176,12 @@ android {
     lint { abortOnError false; checkReleaseBuilds false }
 }
 
-// ./gradlew apk → out/anka-native-test.apk (-PnxPlay=true: anka-native-play.apk; -PnxApp=<suffix>: anka-native-<suffix>.apk; -PnxLive=true: anka-native-<version>.apk)
+// ./gradlew apk → out/nativeayn-test.apk (-PnxPlay=true: nativeayn-play.apk; -PnxApp=<suffix>: nativeayn-<suffix>.apk; -PnxLive=true: nativeayn-<version>.apk)
 tasks.register('apk', Copy) {
     dependsOn 'assembleRelease'
     from(layout.buildDirectory.dir('outputs/apk/release')) { include '*.apk' }
     into layout.projectDirectory.dir('out')
-    rename { nxLive ? "anka-native-${nxVersion}.apk" : nxPlay ? 'anka-native-play.apk' : nxApp ? "anka-native-${nxApp}.apk" : 'anka-native-test.apk' }
+    rename { nxLive ? "nativeayn-${nxVersion}.apk" : nxPlay ? 'nativeayn-play.apk' : nxApp ? "nativeayn-${nxApp}.apk" : 'nativeayn-test.apk' }
 }
 
 // The on-device packer's native side (android/ONDEVICE.md "In the APK"; not with -PnxPackEngine=fake). android/ondevice/build.sh makes its stage on the Mac;

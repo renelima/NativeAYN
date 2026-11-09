@@ -60,7 +60,7 @@ o resto depois dele não é ambíguo. As ferramentas aceitam isso em todo lugar 
   uma view NUP, então `shader_split.py`, `romfs_image.py` e `pack_dump.py` (scan, pack_version, pack_dlc) aceitam caminhos `.nup` sem
   código próprio. `<file>.nup:` com um seletor vazio é a raiz do contêiner (pastas `base`, `update/<v>`,
   `addon/<tid>`); um caminho que nomeia um pacote ausente não é encontrado.
-- Módulo zstd: `compression.zstd` (Python 3.14: ankanative-env no Mac, o CPython 3.14.6 do celular), senão
+- Módulo zstd: `compression.zstd` (Python 3.14: nativeayn-env no Mac, o CPython 3.14.6 do celular), senão
   `backports.zstd`; importado no primeiro arquivo comprimido, então um `.nup` só raw não precisa de nenhum.
 - O reescritor lê arquivos simples: o `pack_android.py` copia um módulo NUP para o `.nup-src/<module>/` do pack para o
   `patch_nso.py` e o apaga depois (`rewriter_src`). O `nso.py` e os outros arquivos `REWRITER` ficam inalterados, então a rewrite
@@ -71,7 +71,7 @@ o resto depois dele não é ambíguo. As ferramentas aceitam isso em todo lugar 
 - Um `.nup` não tem arquivos `.listing` (SPEC §6.3), então a sua contagem de arquivos difere a de um dump de pasta (DKB update: 77.342 contra
   80.273); a saída do shader split é a mesma.
 - `dm/tools/nup_pack.py`: um pequeno gravador clean-room, para fixtures de teste (um dump de pasta → `.nup`), não para usuários.
-- Testes: `python -m unittest dm/tools/tests/test_nup.py` (ankanative-env). No DKB, o `pack_android.py` a partir da pasta e a partir
+- Testes: `python -m unittest dm/tools/tests/test_nup.py` (nativeayn-env). No DKB, o `pack_android.py` a partir da pasta e a partir
   do `.nup` (`--in-process`, o caminho do celular) dão módulos, tabelas e chaves byte-idênticos; o `shader_split.py` dá
   o mesmo pacote e as mesmas tabelas (22.852 shaders).
 

@@ -88,7 +88,7 @@ static int init_once(void) {
         for (uint32_t i = 0; i < nl; i++) if (!strcmp(lp[i].layerName, layer)) nlayer = 1;
         free(lp); VLOG("DM_VK_VALIDATE: validation layer %s", nlayer ? "on" : "not installed");
     }
-    VkApplicationInfo ai = {VK_STRUCTURE_TYPE_APPLICATION_INFO, .pApplicationName = "Anka Native", .pEngineName = "Anka Native", .apiVersion = VK_API_VERSION_1_3};
+    VkApplicationInfo ai = {VK_STRUCTURE_TYPE_APPLICATION_INFO, .pApplicationName = "NativeAYN", .pEngineName = "NativeAYN", .apiVersion = VK_API_VERSION_1_3};
     VkInstanceCreateInfo ici = {VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO, .pApplicationInfo = &ai, .enabledExtensionCount = niext, .ppEnabledExtensionNames = iext,
                                 .enabledLayerCount = nlayer, .ppEnabledLayerNames = &layer};
     VkResult r = vk.vkCreateInstance(&ici, NULL, &V.inst);

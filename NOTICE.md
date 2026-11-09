@@ -1,7 +1,7 @@
 # NativeAYN: créditos e licenças
 
 O NativeAYN é construído sobre o trabalho de outras pessoas. Este arquivo é onde elas recebem crédito; seus copyrights e licenças são mantidos.
-O NativeAYN é baseado no projeto Anka Native, de renelima.
+O NativeAYN dá continuidade ao port para Android do nxnative: os projetos em que se baseia estão creditados abaixo.
 
 ## Os projetos nos quais se baseia
 
