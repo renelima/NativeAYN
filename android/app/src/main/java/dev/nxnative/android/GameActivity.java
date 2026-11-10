@@ -463,6 +463,13 @@ public final class GameActivity extends Activity implements SurfaceHolder.Callba
             // mode that give that size (graphics_scale rows), as its profile says (Profile.resolutionEnv); nothing for a game with neither
             Profile prof = Profile.of(id);
             if (prof != null) env.addAll(prof.resolutionEnv(Prefs.gameWindow(this, id)));
+            // Scene resolution 720p (Game settings): the RomFS overlay made on the phone from the player's files, while it matches this pack (SceneOverlay)
+            String sceneNote = null;
+            if (prof != null && prof.hasScene() && Prefs.scene720(this, id)) {
+                if (SceneOverlay.current(files, id, prof.sceneScale(), prof.sceneExpect(), pack.version)) env.add("DM_ROMFS_OVERLAY=" + SceneOverlay.dir(files, id));
+                else sceneNote = "[RED] [nxlaunch] Scene resolution 720p: the overlay " + SceneOverlay.dir(files, id) + " was not made for this pack (version " + pack.version
+                        + ", scale " + prof.sceneScale() + "): the game's own scene size this run; choosing 720p in its Game settings makes it again";
+            }
             Lsfg.env(this, env);   // frame generation: the user's Lossless.dll and the settings
             Fsr.env(this, env);   // FSR 1 upscaling (the in-game panel)
             int cap = Prefs.fpsCap(this, id);   // the game's own frame rate cap (its in-game panel, its Game settings), else the main screen's (unset: the profile's fps_target)
@@ -488,6 +495,10 @@ public final class GameActivity extends Activity implements SurfaceHolder.Callba
             Native.note("device " + Build.MANUFACTURER + " " + Build.MODEL + ", Android " + Build.VERSION.RELEASE + " (SDK " + Build.VERSION.SDK_INT + "), " + Build.SUPPORTED_ABIS[0]
                     + "; game " + game + "; pack " + packDir);
             if (envProblem != null) Native.note("[RED] env.txt: " + envProblem);
+            if (sceneNote != null) {
+                Native.note(sceneNote);
+                Toast.makeText(this, "Scene resolution 720p: the overlay is not ready for this pack yet: its Game settings make it again", Toast.LENGTH_LONG).show();
+            }
             if (!refused.isEmpty()) {
                 String msg = "not taken: " + String.join(", ", refused) + ": the launcher sets the game's paths (DM_SAVE, DM_ROMFS, DM_TEMP, DM_ROOT, DM_AOC_DIR, HOME)"
                         + (testApp() ? "; DM_SAVE is taken from env-<title ID>.txt only" : "");

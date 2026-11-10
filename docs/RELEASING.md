@@ -5,7 +5,7 @@ Como o dono compila e assina uma release pública. A chave de release pertence s
 O APK de release é o app de release (`-PnxLive=true`): app id `dev.nativeayn.android` (`-PnxAppId=dev.nativeayn.android`), chamado "NativeAYN", não debugável, com o atualizador interno ativado.
 Por padrão ele executa Ocarina of Time (`0400486024DEC000`) e não tem packer no telefone (`-PnxPackEngine=fake`); `android/tools/release.sh` o compila.
 
-> **A situação desta máquina (fork, releases v0.1.0–v0.1.4):** ver [6. A chave usada até a v0.1.4](#6-a-chave-usada-até-a-v014-nesta-máquina) no fim do arquivo — as releases publicadas aqui não usam uma chave de release própria; usam a debug key do Android desta máquina, e o OTA de quem tem essas versões instaladas só aceita atualizações assinadas por essa mesma chave.
+> **A situação desta máquina (fork, releases v0.1.0–v0.1.4):** ver a seção 6 no fim do arquivo — as releases publicadas aqui não usam uma chave de release própria; usam a debug key do Android desta máquina, e o OTA de quem tem essas versões instaladas só aceita atualizações assinadas por essa mesma chave.
 
 ## 1. Criar a chave de release (uma vez)
 

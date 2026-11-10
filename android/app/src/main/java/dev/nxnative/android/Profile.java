@@ -21,11 +21,30 @@ final class Profile {
     String stamp = "";   // its "stamp" rows: "version:old SHA-256:new SHA-256", ';' between them (ShaderLibs.restamp)
     String resolution = "";   // what Game resolution sets (build.gradle resolutionOf): "window", "scale:<choice>=<scale>/<console|handheld>,…" or "" (nothing: not offered)
     String gpuTs = "submission";   // game.tsv gpu_timestamps (build.gradle gpuTsOf): "segment" or "submission", what the host does without DM_NVN_GPU_TS (Game settings › GPU timing)
-    String window = "";   // game.tsv android_window (build.gradle windowOf): the default Game resolution when the player chose none (Prefs.gameWindow), "" for the main screen's
+    String window = "";   // game.tsv android_window (build.gradle windowOf): the default Game resolution when the player chose none (Prefs.gameWindow), "
+    String scene = "";   // the Scene resolution's 720p (build.gradle sceneOf): "<scale>/<expected original scales, ','>" from scene_scale_palette, or "" (not offered)" for the main screen's
     String romfsChecks = "";   // game.tsv romfs_check rows (build.gradle romfsChecksOf): "<path>|<line>|<expected or main>", ';' between them (RomfsCheck)
 
     /** Whether Game resolution does something for this game (its profile has window_fn or graphics_scale rows) */
     boolean hasResolution() { return resolution.equals("window") || resolution.startsWith("scale:"); }
+
+    /** The scale the Scene resolution's 720p writes into every level of the game's dynamic resolution palette (gsys_dynres.py --scale), null when it has none */
+    String sceneScale() {
+        int sl = scene.indexOf('/');
+        String s = sl < 0 ? scene : scene.substring(0, sl);
+        if (!s.matches("\\d*\\.\\d+|\\d+")) return null;
+        return s;
+    }
+
+    /** The palette's original scales gsys_dynres.py --expect checks before writing ("" when the row names none) */
+    String sceneExpect() {
+        int sl = scene.indexOf('/');
+        String e = sl < 0 ? "" : scene.substring(sl + 1);
+        return e.matches("[0-9.]+(,[0-9.]+)*") ? e : "";
+    }
+
+    /** Whether Game settings › Scene resolution does something for this game (its profile has a scene_scale_palette row) */
+    boolean hasScene() { return sceneScale() != null; }
 
     /**
      * The host's environment lines for a Game resolution choice (Prefs.WINDOWS: "1920x1080", "original", "1280x720"): DM_WINDOW_SIZE=&lt;choice&gt; for a game with
@@ -75,6 +94,7 @@ final class Profile {
             p.romfsChecks = c.length > 10 ? c[10] : "";
             if (c.length > 11 && !c[11].isEmpty()) p.gpuTs = c[11];
             p.window = c.length > 12 ? c[12] : "";
+            p.scene = c.length > 13 ? c[13] : "";
             out.add(p);
         }
         return Collections.unmodifiableList(out);

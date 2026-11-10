@@ -5,6 +5,8 @@ import android.text.InputType;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -45,6 +47,14 @@ final class GameSettings {
         ram.value(Lang.t(a, "Keeps the game's texture data in a file instead of compressed RAM: about 1 GB more free RAM where the phone runs short, but each area load writes ")
                 + Lang.t(a, "that data to storage (about 2 GB in Ocarina of Time) and needs that much free space. Off: as before"));
         Ui.add(box, ram.view, 0);
+        if (prof != null && prof.hasScene()) {   // only where the profile names the palette's scale (game.tsv scene_scale_palette; SceneOverlay)
+            boolean sceneOn = Prefs.scene720(a, id);
+            Ui.Setting sc = new Ui.Setting(a, "🎞️", Lang.t(a, "Scene resolution"), v -> scene(a, g, again))
+                    .value(Lang.t(a, "Game default (the game's own palette)") + Lang.t(a, " · 720p patches that palette: the scene costs less, the upscale stays sharp"));
+            if (sceneOn) sc.value(Lang.t(a, "720p"));
+            Ui.add(box, sc.chevron(a).view, 0);
+            if (sceneOn) sceneCheck(a, g, prof, sc);
+        }
         String env = Prefs.gameEnv(a, id);
         Ui.add(box, new Ui.Setting(a, "🧪", Lang.t(a, "Extra environment"), v -> env(a, g, again))
                 .value(env.isEmpty() ? Lang.t(a, "None (KEY=VALUE lines for the host, after env.txt)") : env.split("\n").length + Lang.t(a, " line(s): ") + env.replace('\n', ' ')).chevron(a).view, 0);
@@ -108,6 +118,103 @@ final class GameSettings {
         });
         Ui.add(box, rg, 8);
         d[0] = Ui.sheet(a, Lang.t(a, "GPU timing · ") + g.name, box).setNegativeButton(Lang.t(a, "Cancel"), null).show();
+    }
+
+    /** Scene resolution: the game's own palette (the default) or 720p, whose RomFS overlay is made from the player's files by SceneService when it is not there yet */
+    private static void scene(MainActivity a, Game g, Runnable done) {
+        Profile prof = Profile.of(g.titleId);
+        if (prof == null || !prof.hasScene()) return;
+        String[] labels = {Lang.t(a, "Game default (the game's own palette)"), Lang.t(a, "720p")};
+        int checked = Prefs.scene720(a, g.titleId) ? 1 : 0;
+        new AlertDialog.Builder(a).setTitle(Lang.t(a, "Scene resolution · ") + g.name).setSingleChoiceItems(labels, checked, (x, w) -> {
+            x.dismiss();
+            if (w == 0) { sceneWant(g.titleId, false); Prefs.scene720(a, g.titleId, false); done.run(); }
+            else if (!Ondevice.available()) a.error(Lang.t(a, "This app build has no on-phone packer, so it cannot make the overlay: run the game's own scene resolution"));
+            else makeScene(a, g, prof, done);
+        }).setNegativeButton(Lang.t(a, "Cancel"), null).show();
+    }
+
+    /** The pack's version and the RomFS as the host takes it ({version, romfs}), or null with no pack or RomFS. Reads pack.tsv and the .nup: off the main thread */
+    private static String[] sceneInputs(Game g) {
+        try {
+            Pack p = Pack.read(new File(g.packDir));
+            String romfs = p.romfsPath(new File(g.gameDir));
+            return romfs == null ? null : new String[] {p.version, romfs};
+        } catch (IOException | RuntimeException e) { return null; }
+    }
+
+    /** A 720p row whose overlay no longer matches the pack (a game update, another scale in the profile): the row says so; choosing 720p again makes it again */
+    private static void sceneCheck(MainActivity a, Game g, Profile prof, Ui.Setting row) {
+        File files = a.getExternalFilesDir(null);
+        new Thread(() -> {
+            String[] in = sceneInputs(g);
+            boolean ok = files != null && in != null && SceneOverlay.current(files, g.titleId, prof.sceneScale(), prof.sceneExpect(), in[0]);
+            if (!ok) a.runOnUiThread(() -> row.value(Lang.t(a, "720p (the overlay no longer matches this game: choose 720p again to make it)")));
+        }, "nx-scene-check").start();
+    }
+
+    /**
+     * The player's last Scene resolution choice per game in this process (true: 720p): an overlay's answer turns 720p on only while that is still the choice, so
+     * "Game default" while it is being made wins, and a second 720p (answered RUNNING) is turned on by the first run's answer
+     */
+    private static final java.util.Map<String, Boolean> SCENE_WANT = new java.util.HashMap<>();
+
+    private static void sceneWant(String id, boolean on) {
+        synchronized (SCENE_WANT) { SCENE_WANT.put(id, on); }
+    }
+
+    private static boolean sceneWanted(String id) {
+        synchronized (SCENE_WANT) { return Boolean.TRUE.equals(SCENE_WANT.get(id)); }
+    }
+
+    /**
+     * 720p chosen: the overlay is made from the player's own RomFS by gsys_dynres.py in the packer's process (SceneService) unless the one there already matches,
+     * behind a wait dialog; the setting turns on only once the overlay is there. Started while the launcher is in front; one run at a time, and behind a Prepare step when one runs
+     */
+    private static void makeScene(MainActivity a, Game g, Profile prof, Runnable done) {
+        File files = a.getExternalFilesDir(null);
+        sceneWant(g.titleId, true);
+        // Back closes the dialog (the :pack process could end without an answer: the first run there also unpacks the packer); the answer still turns 720p on and says so
+        AlertDialog wait = new AlertDialog.Builder(a).setMessage(Lang.t(a, "Making the 720p scene overlay…")).setCancelable(true).create();
+        wait.show();
+        String id = g.titleId, scale = prof.sceneScale(), expect = prof.sceneExpect();
+        new Thread(() -> {
+            String[] in = sceneInputs(g);
+            boolean have = files != null && in != null && SceneOverlay.current(files, id, scale, expect, in[0]);
+            a.runOnUiThread(() -> {
+                boolean gone = a.isFinishing() || a.isDestroyed();
+                if (in == null || files == null || have) {
+                    if (!gone) { try { wait.dismiss(); } catch (RuntimeException ignored) { /* its window is gone */ } }
+                    if (have) { if (sceneWanted(id)) { Prefs.scene720(a, id, true); toast(a, Lang.t(a, "The 720p scene overlay is ready")); } }
+                    else if (gone) toast(a, Lang.t(a, "Scene 720p failed: this game has no pack or RomFS to make the overlay from"));
+                    else a.error(Lang.t(a, "Scene 720p failed: this game has no pack or RomFS to make the overlay from"));
+                    if (!gone && sceneWanted(id)) done.run();
+                    return;
+                }
+                SceneService.start(a, id, in[1], scale, expect, in[0], new android.os.ResultReceiver(new android.os.Handler(android.os.Looper.getMainLooper())) {
+                    @Override protected void onReceiveResult(int code, android.os.Bundle data) {
+                        String msg = data == null ? null : data.getString(SceneService.MESSAGE);
+                        boolean end = a.isFinishing() || a.isDestroyed();
+                        if (!end) { try { wait.dismiss(); } catch (RuntimeException ignored) { /* its window is gone */ } }
+                        if (code == 0) {
+                            // made, but turned on only when the player has not chosen otherwise meanwhile (the overlay stays: a later 720p takes it at once)
+                            if (sceneWanted(id)) { Prefs.scene720(a, id, true); toast(a, Lang.t(a, "The 720p scene overlay is ready")); }
+                        } else if (code == SceneService.RUNNING) {
+                            toast(a, Lang.t(a, "The 720p scene overlay is already being made: it turns on when it is ready"));
+                        } else {
+                            String why = msg != null ? msg : "exit " + code;
+                            if (end) toast(a, Lang.t(a, "Scene 720p failed: ") + why);
+                            else a.error(Lang.t(a, "Scene 720p failed: ") + why);
+                        }
+                        if (!end) done.run();
+                    }
+                });
+            });
+        }, "nx-scene-make").start();
+    }
+
+    private static void toast(MainActivity a, String msg) {
+        a.runOnUiThread(() -> android.widget.Toast.makeText(a, msg, android.widget.Toast.LENGTH_LONG).show());
     }
 
     private static void resolution(MainActivity a, Game g, Runnable done) {

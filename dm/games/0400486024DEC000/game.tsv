@@ -52,6 +52,10 @@ fps_target	60
 render_cond	on
 # The game's dynamic resolution decides from GPU timestamps (upstream nxnative's profile)
 gpu_timestamps	segment
+# The Android launcher's Scene resolution 720p: dm/tools/gsys_dynres.py writes this ResolutionReduceScale into every level of DynamicResolutionParam's palettes
+# (Pack/Bootup.Nin_Ounce_NVN2.pack.zs), checked against the originals that follow, as a RomFS overlay made on the phone from the player's files (DM_ROMFS_OVERLAY).
+# The scene is not linear in the scale: 0.625 gave 1304x734, 0.6135 gives 1275x717 (seen on the phone 2026-11-07)
+scene_scale_palette	0.6135	0.75,0.71112,0.66667,0.62223,0.58334,0.53334,0.5,0.4445,0.37223,0.33334
 # The CPU writes some textures after creating them, published with and without a flush (upstream nxnative's profile: the terrain's height, blend and hole maps)
 tex_flush_upload	on
 tex_dirty_upload	on

@@ -24,8 +24,8 @@ if (nxApp && nxPlay) throw new GradleException('nxApp and nxPlay build different
 // with the owner's release key (docs/RELEASING.md, android/tools/release.sh). -PnxVersion sets its version
 def nxLive = providers.gradleProperty('nxLive').getOrElse('false') == 'true'
 if (nxLive && (nxPlay || nxApp)) throw new GradleException('nxLive builds the release app: give neither nxPlay nor nxApp')
-def nxVersion = providers.gradleProperty('nxVersion').getOrElse('0.1.6')
-def nxVersionCode = providers.gradleProperty('nxVersionCode').getOrElse('7') as int
+def nxVersion = providers.gradleProperty('nxVersion').getOrElse('0.1.7')
+def nxVersionCode = providers.gradleProperty('nxVersionCode').getOrElse('8') as int
 // The release key never lives in this repository: its keystore path, alias and passwords are read from the environment, or else from the user's
 // ~/.gradle/gradle.properties (GRADLE_USER_HOME), never from a gradle.properties or -P in the project: ANKA_KEYSTORE (a keystore outside this repository),
 // ANKA_KEY_ALIAS, ANKA_KEYSTORE_PASSWORD and ANKA_KEY_PASSWORD (the key's own password; the store's when unset). Only -PnxLive=true reads them
@@ -96,7 +96,9 @@ def romfsChecksOf = { String game -> tsvRows(game, 'romfs_check').findAll { it.s
 def gpuTsOf = { String game -> tsvRows(game, 'gpu_timestamps').with { rs -> rs.isEmpty() || rs[0].size() < 2 ? 'submission' : rs[0][1].trim() } }
 // The profile's default Game resolution (game.tsv android_window: one of Prefs.WINDOWS; empty without the key: the main screen's default)
 def windowOf = { String game -> tsvRows(game, 'android_window').with { rs -> rs.isEmpty() || rs[0].size() < 2 ? '' : rs[0][1].trim() } }
-def nxProfiles = nxGames.collect { g -> [g, nameOf(g).replaceAll(/[\t\n\\"]/, ' '), shaderTotalOf(g), shaderInputsOf(g), buildsOf(g), reqsOf(g), statusOf(g), deltaOf(g), stampOf(g), resolutionOf(g), romfsChecksOf(g), gpuTsOf(g), windowOf(g)].join('\\t') }.join('\\n')
+// and last the Scene resolution's 720p (Profile.sceneScale): the profile's scene_scale_palette row, "<scale>/<expected original scales>", empty without one
+def sceneOf = { String game -> tsvRows(game, 'scene_scale_palette').collect { c -> c[1].trim() + (c.size() > 2 ? '/' + c[2].trim() : '') }.find() ?: '' }
+def nxProfiles = nxGames.collect { g -> [g, nameOf(g).replaceAll(/[\t\n\\"]/, ' '), shaderTotalOf(g), shaderInputsOf(g), buildsOf(g), reqsOf(g), statusOf(g), deltaOf(g), stampOf(g), resolutionOf(g), romfsChecksOf(g), gpuTsOf(g), windowOf(g), sceneOf(g)].join('\\t') }.join('\\n')
 def lockOf = { String key -> def f = new File(repo, 'dm/gfx/tools/dmsh_chain.lock'); f.isFile() ? (f.readLines().find { it.startsWith(key + '\t') }?.split('\t')?.getAt(1) ?: 'unknown') : 'unknown' }
 
 android {

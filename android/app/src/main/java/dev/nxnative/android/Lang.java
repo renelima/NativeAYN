@@ -283,6 +283,22 @@ final class Lang {
         p("For this game only, from its next start. Default follows Settings.",
                 "Só para este jogo, a partir do seu próximo início. Padrão segue os Ajustes.");
         p("Game resolution", "Resolução do jogo");
+        p("Scene resolution", "Resolução da cena");
+        p("Scene resolution · ", "Resolução da cena · ");
+        p("Game default (the game's own palette)", "Padrão do jogo (a paleta do próprio jogo)");
+        p(" · 720p patches that palette: the scene costs less, the upscale stays sharp",
+                " · 720p corrige essa paleta: a cena custa menos, o upscale continua nítido");
+        p("720p (the overlay no longer matches this game: choose 720p again to make it)",
+                "720p (o overlay não corresponde mais a este jogo: escolha 720p de novo para refazê-lo)");
+        p("Making the 720p scene overlay…", "Criando o overlay 720p da cena…");
+        p("The 720p scene overlay is ready", "O overlay 720p da cena está pronto");
+        p("The 720p scene overlay is already being made: it turns on when it is ready",
+                "O overlay 720p da cena já está sendo criado: ele entra em quando ficar pronto");
+        p("Scene 720p failed: this game has no pack or RomFS to make the overlay from",
+                "Cena 720p falhou: este jogo não tem pack nem RomFS para criar o overlay");
+        p("Scene 720p failed: ", "Cena 720p falhou: ");
+        p("This app build has no on-phone packer, so it cannot make the overlay: run the game's own scene resolution",
+                "Esta versão do app não tem packer no telefone, então não pode criar o overlay: use a resolução de cena do próprio jogo");
         p("GPU timing", "Timing da GPU");
         p("Pause on return", "Pausar ao voltar");
         p("Coming back from the background, the game waits paused for a tap",

@@ -98,6 +98,16 @@ final class Prefs {
     static void pauseOnReturn(Context c, String titleId, boolean on) { of(c).edit().putBoolean(gameKey("pause_return", titleId), on).commit(); }
 
     /**
+     * The game's scene resolution (its Game settings › Scene resolution; only for a game whose profile has scene_scale_palette, Profile.hasScene): false, the
+     * default (the game's own palette), or true: 720p, the RomFS overlay SceneOverlay makes from the player's own files (DM_ROMFS_OVERLAY)
+     */
+    static boolean scene720(Context c, String titleId) { return of(c).getBoolean(gameKey("scene_720p", titleId), false); }
+    static void scene720(Context c, String titleId, boolean on) {
+        if (on) of(c).edit().putBoolean(gameKey("scene_720p", titleId), true).commit();
+        else of(c).edit().remove(gameKey("scene_720p", titleId)).commit();   // (the overlay's files stay in the app's folder: taken again at once if 720p is chosen again)
+    }
+
+    /**
      * Intro skip (per game, a debug aid, off by default): DM_SKIP=1 for the host, so that holding Minus and Plus together for 1 s in the game skips its intro
      * (dm/host/hle_hid.c: presses A, ends movies, stops by itself at gameplay; android/TESTING.md "Intro skip"). A DM_SKIP line in env.txt or the game's own lines wins.
      */

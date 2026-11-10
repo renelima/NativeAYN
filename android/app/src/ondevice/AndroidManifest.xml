@@ -15,5 +15,11 @@
             android:exported="false"
             android:process=":pack"
             android:foregroundServiceType="dataSync" />
+        <!-- The Scene resolution's 720p overlay (SceneService): one short tool run in the packer's Python, so in the packer's process; started while the launcher
+             is in front (a plain started service, no notification) -->
+        <service
+            android:name=".SceneService"
+            android:exported="false"
+            android:process=":pack" />
     </application>
 </manifest>

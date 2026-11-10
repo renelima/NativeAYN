@@ -6,6 +6,17 @@ Histórico das releases do **NativeAYN**, o recompilador de Switch 2 para Androi
 O app é construído sobre o projeto base ([créditos em NOTICE.md](NOTICE.md)); o histórico dele antes do NativeAYN não faz parte deste arquivo — o versionamento
 do NativeAYN começa no 0.1.0. Builds de lançamento: [docs/RELEASING.md](docs/RELEASING.md).
 
+## NativeAYN 0.1.7 (2026-11-10)
+
+### Ocarina of Time: Scene resolution 720p (Game settings)
+
+- Nova linha **Resolução da cena** nas Configurações do jogo (só onde o profile tem `scene_scale_palette`): *Padrão do jogo* ou **720p**. 720p cria no telefone, a partir do RomFS do próprio jogador, um overlay (a ferramenta `dm/tools/gsys_dynres.py` roda no Python do packer) que escreve a escala em todos os níveis da paleta de resolução dinâmica do jogo (`DM_ROMFS_OVERLAY` no host). A cena fica ~1275x717 com o upscale FSR 1 intacto; o carimbo do overlay (escala + escala originais + versão do pack) garante que uma atualização do jogo peça para refazê-lo.
+- **O APK de release agora traz o packer no telefone** (estágio oficial do `android/ondevice/build.sh`: CPython 3.14 + tradutor + SPIRV-Tools): o botão **Preparar** volta a funcionar no telefone, e é ele que roda a ferramenta acima.
+
+### Correções e ajustes
+
+- (nenhuma outra mudança de código em relação à 0.1.6)
+
 ## NativeAYN 0.1.6 (2026-11-09)
 
 Mesmo código da 0.1.5. É a release de migração para o pacote `dev.nativeayn.android` (o app id visível e o nome "NativeAYN" não mudam): a primeira instalação dela é por arquivo (o Android não atualiza entre pacotes diferentes), e a partir dela as atualizações chegam pelo OTA normal. Os packs ao lado do dump são achados sozinhos; os saves migram na primeira execução (docs/RELEASING.md, seção 7).
