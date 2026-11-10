@@ -5,6 +5,8 @@ Como o dono compila e assina uma release pública. A chave de release pertence s
 O APK de release é o app de release (`-PnxLive=true`): app id `dev.nativeayn.android` (`-PnxAppId=dev.nativeayn.android`), chamado "NativeAYN", não debugável, com o atualizador interno ativado.
 Por padrão ele executa Ocarina of Time (`0400486024DEC000`) e não tem packer no telefone (`-PnxPackEngine=fake`); `android/tools/release.sh` o compila.
 
+> **A situação desta máquina (fork, releases v0.1.0–v0.1.4):** ver [6. A chave usada até a v0.1.4](#6-a-chave-usada-até-a-v014-nesta-máquina) no fim do arquivo — as releases publicadas aqui não usam uma chave de release própria; usam a debug key do Android desta máquina, e o OTA de quem tem essas versões instaladas só aceita atualizações assinadas por essa mesma chave.
+
 ## 1. Criar a chave de release (uma vez)
 
 Escolha uma pasta fora deste repositório, por exemplo `~/keys/nativeayn`, e execute (ela pede a senha do keystore duas vezes; em um keystore PKCS12, o padrão, a senha da chave é a mesma do store):
@@ -84,3 +86,24 @@ Opções (ambiente): `ANKA_VERSION` (padrão `0.1.0`) e `ANKA_VERSION_CODE` (pad
 1. Dê push no commit lançado (e sua tag) para `github.com/renelima/NativeAYN` **antes ou junto com** o APK: o APK é GPL-3.0-or-later como um todo, então seu código-fonte completo (este repositório no commit da build tag do app) deve estar disponível para todos que o recebem ([NOTICE.md](../NOTICE.md)).
 2. Crie uma release no GitHub (tag `v<version>`, marcada como pre-release) e envie apenas o APK e o `SHA256SUMS.txt`. O atualizador interno pega o primeiro asset `.apk` da release e o confere contra o digest SHA-256 que o GitHub calcula dele.
 3. Coloque o SHA-256 do certificado nas notas da release.
+
+## 6. A chave usada até a v0.1.4 (nesta máquina)
+
+As releases publicadas neste repositório (`NativeAYN-0.1.0.apk` e `nativeayn-0.1.1.apk` … `nativeayn-0.1.4.apk`) **não** usam uma chave de release criada aqui: todas foram assinadas com a **debug key do Android gerada automaticamente pelo Gradle** nesta máquina.
+
+- Arquivo: `/home/renelima/.android/debug.keystore` no **WSL (Ubuntu-24.04)** — o único lugar onde a chave existe. Uma cópia de backup vive em `keys/debug.keystore` nesta árvore de trabalho (fora do git: o `.gitignore` rejeita `*.keystore`; se esta árvore for movida/copiada, o backup viaja junto).
+- Senhas e alias: o padrão público da debug key (`storepass android`, `keypass android`, alias `androiddebugkey`). Não é segredo — o que importa é o **par chave/instalações**: é ela que o Android compara.
+- Certificado (público): SHA-256 `f81ff981ae51676847a259abd4fa62371ad207e606d4d9825a74d8557065395a` — conferido de fato entre o keystore e o APK da release v0.1.4 baixado do GitHub (e é o valor de `Signer.OFFICIAL` desde 2026-11-09; o `4d744335…` anterior era de outra chave e não assinou nenhuma release daqui).
+- Para o `release.sh` aceitar essa chave, aponte as configurações da seção 2 para ela (a debug key fica fora do repositório, como o script exige):
+
+```sh
+export ANKA_KEYSTORE="$HOME/.android/debug.keystore"
+export ANKA_KEY_ALIAS=androiddebugkey
+export ANKA_KEYSTORE_PASSWORD=android ANKA_KEY_PASSWORD=android
+```
+
+Consequências, em uma frase cada:
+
+- **O build de release tem que sair sempre desta máquina/WSL** (mesmo keystore), ou de qualquer lugar que tenha uma cópia idêntica dela; outro keystore ⇒ conflito de assinatura ⇒ o updater recusa e cada telefone precisa desinstalar (perdendo a pasta de dados e os packs) para instalar a versão nova.
+- **Perder o arquivo** (`~/.android/debug.keystore`) ⇒ restaure do backup `keys/debug.keystore` (copie de volta para `~/.android/debug.keystore`); se ambos se perderem, é o caso acima.
+- A cópia em `keys/` **não é criptografada** e tem senha pública: é backup de conveniência, não cofre. Se um dia o app sair do círculo de testes desta máquina, crie a chave de release verdadeira (seção 1), preencha o `Signer.OFFICIAL` com ela (seção 3) e publique uma release assinada por ela — a *primeira* atualização para essa chave ainda precisa vir assinada pela debug key atual, porque é ela que está instalada nos telefones.
