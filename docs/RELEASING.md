@@ -108,12 +108,10 @@ Consequências, em uma frase cada:
 - **Perder o arquivo** (`~/.android/debug.keystore`) ⇒ restaure do backup `keys/debug.keystore` (copie de volta para `~/.android/debug.keystore`); se ambos se perderem, é o caso acima.
 - A cópia em `keys/` **não é criptografada** e tem senha pública: é backup de conveniência, não cofre. Se um dia o app sair do círculo de testes desta máquina, crie a chave de release verdadeira (seção 1), preencha o `Signer.OFFICIAL` com ela (seção 3) e publique uma release assinada por ela — a *primeira* atualização para essa chave ainda precisa vir assinada pela debug key atual, porque é ela que está instalada nos telefones.
 
-## 7. O rename do app id (adiado; publicar continua com `dev.ankanative.android`)
+## 7. O rename do app id (de `dev.ankanative.android` para `dev.nativeayn.android`)
 
-As releases v0.1.0–v0.1.5 saíram com o app id `dev.ankanative.android`. **Publicações continuam com ele**: o Android só atualiza por cima quem tem o mesmo pacote, e o atualizador interno mostra "Update not installed" (`INSTALL_FAILED_INVALID_APK … inconsistent …`) para um APK com pacote diferente — enquanto existir telefone com o pacote antigo instalado, a release publicada tem que usar `dev.ankanative.android` (o padrão de `nxLive`; não passar `nxAppId`).
+As releases v0.1.0–v0.1.4 saíram com o app id antigo, `dev.ankanative.android`. A partir da v0.1.5 o APK de release usa o nome novo, `-PnxAppId=dev.nativeayn.android` (o `build.gradle` lê `nxAppId`; fora do projeto só via `-P` ou `ORG_GRADLE_PROJECT_nxAppId`). Consequência que o Android impõe, não é escolha nossa:
 
-Quando um dia migrar para `dev.nativeayn.android` (`-PnxAppId=dev.nativeayn.android`, o `build.gradle` lê `nxAppId` via `-P` ou `ORG_GRADLE_PROJECT_nxAppId`):
-
-- **Trocar de app id não é atualização: é outro app.** A primeira instalação do pacote novo é manual (por arquivo), e ele **coexiste** com o antigo; o OTA antigo nunca instala o novo.
+- **Trocar de app id não é atualização: é outro app.** O instalador recusa (`INSTALL_FAILED_INVALID_APK: specified package … inconsistent with …`), e o atualizador interno mostra "Update not installed". O app antigo e o novo **coexistem** no telefone: instale o novo uma vez por fora (APK baixado à mão), e a partir dele o OTA segue normal — o pacote novo é `dev.nativeayn.android` para sempre.
 - A pasta de dados (`Android/data/<app id>/`) é por pacote: o `SaveMigrate` copia os saves do app antigo na primeira execução do novo; **os packs preparados não migram sozinhos** — copie `files/packs/<id>` de um pacote para o outro pelo gerenciador de arquivos (ou re-Prepare).
 - `Signer.OFFICIAL` e a chave não mudam com o rename; só o pacote.
